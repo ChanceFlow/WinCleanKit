@@ -56,3 +56,15 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./tests/Test-Engine.ps1
+
+      # The TUI's logic and rendering are pure functions, so they are testable in
+      # CI. The keyboard loop is not, and is verified by hand.
+      - name: TUI logic tests
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tests/Test-Tui.ps1
+
+      - name: TUI rendering tests
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tests/Test-TuiRender.ps1

@@ -6,7 +6,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4.svg)](#环境要求)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE.svg)](#环境要求)
 [![Actions](https://img.shields.io/badge/catalog-74%20actions-4B5563.svg)](docs/CATALOG.md)
-[![Gates](https://img.shields.io/badge/gates-6%20passing-22C55E.svg)](#仓库结构)
+[![Gates](https://img.shields.io/badge/gates-8%20passing-22C55E.svg)](#仓库结构)
 
 [English](README.md) · **中文说明**  
 **文档:** [用法](docs/USAGE.zh-CN.md) ([EN](docs/USAGE.md)) · [安全](docs/SAFETY.zh-CN.md) ([EN](docs/SAFETY.md)) · [限制](docs/LIMITATIONS.zh-CN.md) ([EN](docs/LIMITATIONS.md)) · [行动目录](docs/CATALOG.md) · [代码规范](docs/LINTING.md)  
@@ -16,32 +16,54 @@
 
 ## 界面长什么样
 
+全屏 TUI，纯键盘操作。方向键移动，`Tab` 切换面板，`空格` 勾选 —— 右侧面板在你动手之前
+就回答「这到底会改什么」：
+
+```text
++--------------------------------------------------------------------------------------------+
+| WinCleanKit v0.1.0   预设 [balanced]   计划: 60 项                                         |
+| 最高风险: 中                                                                               |
++--------------------------------------------------------------------------------------------+
++----------------------------------+---------------------------------------------------------+
+|-  20/22  系统广告与推荐          |  [x] 禁止静默自动安装应用                               |
+|   21/21  遥测与诊断数据          |  [x] 关闭订阅内容(推荐/广告)                            |
+|   11/19  预装应用                |> [x] 关闭桌面 Spotlight 广告图                          |
+|    0/1   OneDrive                |  [x] 关闭锁屏广告浮层                                   |
+|    7/10  隐私加固                |  [ ] 关闭锁屏 Spotlight 轮播                            |
+|    1/1   广告图缓存与壁纸        |  [x] 关闭设置与开始菜单建议                             |
+|                                  |                                                         |
+|                                  |                                                         |
+|                                  |关闭桌面 Spotlight 广告图   [中]                         |
+|                                  |订阅内容 338389 即桌面壁纸/图标形式的 Spotlight 推广。.  |
+|                                  |触及: HKCU\Software\Microsoft\Windows\CurrentVersion\Con…|
+|                                  |                                                         |
+|                                  |                                                         |
+|                                  |                                                         |
+|                                  |                                                         |
+|                                  |                                                         |
++----------------------------------+---------------------------------------------------------+
+| 上下移动  Tab面板  Enter勾选  1/2/3预设  ?帮助  x执行  q退出                               |
+| 空格勾选  .  p 预览  .  x 执行                                                             |
++--------------------------------------------------------------------------------------------+
 ```
-   ------------------------------------------------------------------
-   WinCleanKit   Windows 11 广告 / 遥测 / 预装清理
-   ------------------------------------------------------------------
-   预设: balanced      语言: zh
-   风险等级:  低 = 可逆、无副作用     中 = 有可见取舍     高 = 会删除程序或数据
 
-   当前计划: 共 60 项, 最高风险 [中]   (手动加 0 / 手动减 0)
+| 按键 | 作用 |
+|---|---|
+| `↑` `↓` | 在当前面板内移动 |
+| `Tab` | 在分类面板与动作面板之间切换 |
+| `Enter` | 进入分类；在动作面板中勾选并下移 |
+| `空格` | 勾选 / 取消当前动作 |
+| `1` `2` `3` | 预设：conservative / balanced / aggressive |
+| `a` / `n` | 选中 / 取消当前分类全部 |
+| `A` / `N` | 选中 / 取消全部 |
+| `l` | 切换界面语言（中 / 英） |
+| `p` / `x` / `q` | 预览计划 / 执行 / 退出 |
+| `?` | 应用内帮助 |
 
-   ------------------------------------------------------------------
-   主菜单
-   ------------------------------------------------------------------
-   1. 选择预设            (conservative / balanced / aggressive)
-   2. 按分类选择          (勾选整个分类)
-   3. 逐项自定义          (每个动作单独开关)
-   4. 预览当前计划        (不修改任何东西)
-   5. 执行                (会再次确认，先备份)
-   6. 还原                (从桌面还原点恢复)
-   7. 切换语言            (当前 zh)
-   8. 关于
-   0. 退出
-```
+TUI **不重复实现**任何保护你的逻辑：预览调用引擎自己的计划渲染，执行时把选中的 id
+交回引擎：
 
-预览计划 —— 一张对齐的表格，每条动作的风险等级清晰可见：
-
-```
+```text
    ------------------------------------------------------------------
    WinCleanKit 0.1.0
    ------------------------------------------------------------------
@@ -49,38 +71,28 @@
    Selected : 74 action(s)
    Mode     : PREVIEW ONLY
 
-   系统广告与推荐            22 action(s)
-     [low ] 禁止静默自动安装应用
-     [low ] 关闭订阅内容(推荐/广告)
-     [MED ] 隐藏设置首页推广区块
-
-   预装应用                  11 action(s)
-     [low ] 卸载 Windows 地图
-     [MED ] 卸载媒体播放器(ZuneMusic)
-
-   OneDrive                  1 action(s)
-     [HIGH] 移除 OneDrive 客户端并阻止重装
+   Ads & suggestions         22 action(s)
+     [low ] Forbid silent app installation
+     [low ] Disable subscribed content (recommendations/ads)
+     [MED ] Hide Settings home page promos
 
    Total actions : 74
    Highest risk  : high
 ```
 
-执行时 —— 带进度计数，且只有**一套**状态词表；含义由文字标记承载，**不依赖颜色**：
+执行时带进度计数，且只有**一套**状态词表；含义由文字标记承载，**不依赖颜色**：
 
-```
-   ------------------------------------------------------------------
-   Applying changes
-   ------------------------------------------------------------------
-   Backup / restore : C:\Users\you\Desktop\WinCleanKit-20260913-004942
-
-   系统广告与推荐
-     [ok]  [  1/74]   1%  禁止静默自动安装应用 — HKCU\SilentInstalledAppsEnabled = 0
-     [--]  [  5/74]   6%  卸载 Windows 地图 — not installed
-     [!!]  [ 12/74]  16%  隐藏设置首页推广区块 — key accepted the write but dropped it
-     [XX]  [ 40/74]  54%  某动作 — access denied
+```text
+   [ok]  [  1/74]   1%  禁止静默自动安装应用 — HKCU\SilentInstalledAppsEnabled = 0
+   [--]  [  5/74]   6%  卸载 Windows 地图 — not installed
+   [!!]  [ 12/74]  16%  隐藏设置首页推广区块 — key accepted the write but dropped it
+   [XX]  [ 40/74]  54%  某动作 — access denied
 ```
 
 图例：`[ok]` 已生效 · `[dry]` 将生效 · `[--]` 不适用 · `[!!]` 已跳过或受保护 · `[XX]` 失败。
+
+> **终端不支持全屏界面？** 用 `run.bat --simple`（或 `WinCleanKit.ps1 -Tui:$false`）
+> 走纯文本编号菜单。TUI 自己也会检测并降级，而不会把转义码灌进日志。
 
 ## 为什么还要再做一个？
 
@@ -218,7 +230,7 @@ WinCleanKit/
 │   └── menu/menu.ps1            菜单数据提供者（让 bat 不必解析 JSON）
 ├── catalog/catalog.json         全部 74 条操作，以数据形式存在
 ├── docs/                        目录、用法、安全、限制、代码规范
-├── tests/                       六道门禁：语法、规范、文档、catalog、引擎
+├── tests/                       八道门禁：含 TUI 逻辑与布局
 ├── tools/                       New-CatalogDoc.ps1（生成双语行动目录）
 ├── .github/workflows/           CI（在 .gitea/workflows 有镜像）
 └── localization/                UI 文案
@@ -269,11 +281,16 @@ WinCleanKit/
 # 数据完整性与行为验证
 .\tests\Test-Catalog.ps1
 .\tests\Test-Engine.ps1
+
+# TUI：逻辑与布局都是纯函数，所以同样受测。
+# （按键循环需要真实控制台，由人工验证 —— 见 Tui.Input.ps1。）
+.\tests\Test-Tui.ps1
+.\tests\Test-TuiRender.ps1
 ```
 
-六道门禁在 CI 中都会跑。当前状态：解析器 27 项、PSScriptAnalyzer
-`0 Error / 0 Warning`、文档 5 项（224 条链接）、Catalog 31 项、Engine 23 项。详见
-[LINTING.md](docs/LINTING.md)。
+八道门禁在 CI 中都会跑。当前状态：解析器 37 项、PSScriptAnalyzer
+`0 Error / 0 Warning`、文档 5 项（229 条链接）、Catalog 31 项、Engine 23 项、
+TUI 逻辑 55 项、TUI 布局 50 项。详见 [LINTING.md](docs/LINTING.md)。
 
 ---
 

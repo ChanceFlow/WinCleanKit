@@ -29,7 +29,7 @@ one does not.
 | `balanced` | 60 | conservative plus everything above / 上一档全部 |
 | `aggressive` | 74 | balanced plus everything above (all actions) / 上一档全部（即全部动作） |
 
-## Windows ads & suggestions — 系统广告与推荐
+## Ads & suggestions — 系统广告与推荐
 
 `ads` · 22 actions
 
@@ -235,7 +235,7 @@ Turns off Microsoft's own promotional surfaces: Start menu recommendations, Sett
 - **代价 / Cost:** 不再用你的诊断数据来个性化广告与提示。
 - **Sets:** `HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent\DisableTailoredExperiencesWithDiagnosticData` = `1` (DWord)
 
-## Telemetry & diagnostic data — 遥测与诊断数据
+## Telemetry & diagnostics — 遥测与诊断数据
 
 `telemetry` · 21 actions
 
@@ -628,7 +628,7 @@ Removes the OneDrive client binaries and blocks reinstall. Your OneDrive data fo
 - **代价 / Cost:** 删除 OneDrive 程序本体并设置机器级策略阻止同步与重装。你的数据目录【绝不会】被触碰——原样留在磁盘上，不会上传也不会删除。
 - **Removes:** the OneDrive client binaries and blocks reinstall. The data folder is never touched.
 
-## Privacy hardening — 隐私加固
+## Privacy — 隐私加固
 
 `privacy` · 10 actions
 
@@ -726,7 +726,7 @@ Advertising ID, input personalization, implicit text/ink collection, location, s
 - **代价 / Cost:** 你的电脑不再向陌生人上传更新分片。代价：更新可能略慢。服务本身保留启用。
 - **Sets:** `HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization\DODownloadMode` = `0` (DWord)
 
-## Ad image cache & wallpaper — 广告图缓存与壁纸
+## Ad cache & wallpaper — 广告图缓存与壁纸
 
 `cache` · 1 actions
 

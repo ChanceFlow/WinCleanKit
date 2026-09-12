@@ -73,7 +73,13 @@ param(
     [switch]   $EmitJson,
     [switch]   $ListRestores,
     [string]   $Restore,
-    [switch]   $Version
+    [switch]   $Version,
+    [switch]   $Tui,
+    [switch]   $NoTui,
+    [ValidateSet('conservative', 'balanced', 'aggressive')]
+    [string]   $TuiPreset = 'balanced',
+    [ValidateSet('en', 'zh')]
+    [string]   $TuiLanguage = 'en'
 )
 
 # Version 2.0 (not Latest): catalog entries have optional properties per target
@@ -742,6 +748,44 @@ function Write-CatalogJson {
 # --------------------------------------------------------------------------
 # Main
 # --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# Interactive mode
+# --------------------------------------------------------------------------
+
+function Show-TuiSessionSession {
+    <#
+      Load the TUI libraries and run one interactive session.
+
+      Returns the confirmed plan as a list of action ids, or $null when the user
+      quit. Falls back to $null (and says so) when the console cannot support a
+      full-screen interface, so the caller can degrade instead of crashing.
+    #>
+    [CmdletBinding()]
+    param([string]$TuiPreset)
+
+    $result = Show-TuiSession -Catalog (Get-Catalog) -Engine $PSCommandPath `
+                         -Preset $TuiPreset -Language $TuiLanguage
+
+    if (-not $result) { return $null }
+    return $result
+}
+
+# --------------------------------------------------------------------------
+# Optional interactive UI
+#
+# The TUI lives in three library files. They are dot-sourced here, at script
+# scope, and only when interactive mode is actually requested: dot-sourcing from
+# inside a function would bind every definition to that function's scope, which is
+# why the load cannot live in Show-TuiSessionSession.
+# --------------------------------------------------------------------------
+if ($Tui -and -not $NoTui) {
+    foreach ($f in 'Tui.Logic.ps1', 'Tui.Render.ps1', 'Tui.Input.ps1') {
+        $comp = Join-Path $PSScriptRoot (Join-Path 'lib' $f)
+        if (-not (Test-Path $comp)) { throw "TUI component missing: $comp" }
+        . $comp
+    }
+}
+
 try {
     if ($Version) { Write-Output "WinCleanKit engine $script:EngineVersion"; return }
     if ($ListCatalog) { Write-CatalogJson; return }
@@ -754,6 +798,20 @@ try {
         Write-Info "Running restore: $scriptFile"
         & $scriptFile
         return
+    }
+
+    # Interactive mode. Runs before any selection is resolved, and hands its
+    # result to the same resolution/execution path as every other mode rather than
+    # duplicating preview, apply or backup logic.
+    if ($Tui -and -not $NoTui) {
+        $tuiPlan = Show-TuiSessionSession -TuiPreset $TuiPreset
+        if (-not $tuiPlan) {
+            Write-Info 'Nothing selected; no changes were made.'
+            return
+        }
+        $Only = @($tuiPlan)
+        $Preset = $TuiPreset
+        $Language = $TuiLanguage
     }
 
     $catalog = Get-Catalog

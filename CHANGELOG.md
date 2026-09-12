@@ -8,6 +8,48 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- **A full-screen TUI.** The interactive interface is now a keyboard-driven,
+  panel-based application instead of a numbered menu: a header showing the armed
+  plan and its highest risk, a category pane with per-category selected counts, an
+  action pane with checkboxes, a detail pane that states what the focused action
+  touches, and a key/status footer.
+  - Arrow keys move, `Tab` switches panes, `space` toggles, `Enter` opens a
+    category and steps down, `1`/`2`/`3` switch preset, `a`/`n`/`A`/`N` select by
+    category or wholesale, `l` switches language, `p` previews, `x` applies,
+    `?` shows in-app help.
+  - It draws into the alternate screen buffer, so the terminal scrollback survives
+    the session, and the terminal is restored from a `finally` block.
+  - Legacy consoles get VT processing enabled through the Windows API; if that
+    fails, or output is redirected, the TUI declines and the plain path is used.
+- **`--simple`** (and `-Tui:$false`) keeps the previous numbered menu, for
+  automation, screen readers, and terminals without ANSI support.
+- **Two new test gates.** `tests/Test-Tui.ps1` (55 checks) covers the navigation,
+  selection, preset, risk and scroll-window logic; `tests/Test-TuiRender.ps1`
+  (50 checks) covers the frame geometry, pane borders, checkbox rendering, the help
+  screen, and that rendering never mutates state.
+- `src/lib/Tui.Logic.ps1`, `src/lib/Tui.Render.ps1`, `src/lib/Tui.Input.ps1`.
+
+### Changed
+
+- `WinCleanKit.bat` is now purely an elevation launcher: cmd cannot read arrow
+  keys, so a full-screen interface is impossible there. It hands the session to the
+  engine's TUI and keeps the numbered menu behind `--simple`.
+- Category display names shortened so they fit the TUI's list pane without
+  truncation ("Ads & suggestions" rather than "Windows ads & suggestions").
+- `docs/CATALOG.md` regenerated for the new names.
+
+### Notes
+
+- **What is not tested, stated plainly:** the key loop itself. Reading keys and
+  repainting needs a real interactive console, which no automated run has. It is
+  kept deliberately thin, guarded statically by the parse and lint gates, and every
+  function it dispatches to is covered by tests/Test-Tui.ps1.
+- The TUI reuses the engine's own preview and execution paths rather than
+  duplicating them, so a change to how a plan is applied cannot drift between the
+  two interfaces.
+
+### Added
+
 - **A terminal design system.** The engine now owns one palette and one status
   vocabulary instead of scattering colours and markers through the output:
   - Semantic colour roles (`brand`, `accent`, `success`, `caution`, `danger`,

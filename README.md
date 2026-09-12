@@ -6,7 +6,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4.svg)](#requirements)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE.svg)](#requirements)
 [![Actions](https://img.shields.io/badge/catalog-74%20actions-4B5563.svg)](docs/CATALOG.md)
-[![Gates](https://img.shields.io/badge/gates-6%20passing-22C55E.svg)](#repository-layout)
+[![Gates](https://img.shields.io/badge/gates-8%20passing-22C55E.svg)](#repository-layout)
 
 **English** · [中文说明](README.zh-CN.md)  
 **Docs / 文档:** [Usage](docs/USAGE.md) ([中文](docs/USAGE.zh-CN.md)) · [Safety](docs/SAFETY.md) ([中文](docs/SAFETY.zh-CN.md)) · [Limitations](docs/LIMITATIONS.md) ([中文](docs/LIMITATIONS.zh-CN.md)) · [Catalog](docs/CATALOG.md) ([中文](docs/CATALOG.zh-CN.md)) · [Linting](docs/LINTING.md)  
@@ -16,32 +16,55 @@
 
 ## What it looks like
 
+A full-screen TUI, driven entirely by the keyboard. Arrow keys move, `Tab` switches
+panes, `space` toggles an action — and the right pane answers "what will this
+actually touch?" before you commit to anything:
+
+```text
++--------------------------------------------------------------------------------------------+
+| WinCleanKit v0.1.0   preset [balanced]   plan: 60 actions                                  |
+| highest risk: medium                                                                       |
++--------------------------------------------------------------------------------------------+
++----------------------------------+---------------------------------------------------------+
+|-  20/22  Ads & suggestions       |  [x] Forbid silent app installation                     |
+|   21/21  Telemetry & diagnostics |  [x] Disable subscribed content (recommendations/ads)   |
+|   11/19  Preinstalled apps       |> [x] Disable Windows Spotlight desktop ad               |
+|    0/1   OneDrive                |  [x] Disable lock screen ad overlay                     |
+|    7/10  Privacy                 |  [ ] Disable lock screen Spotlight rotation             |
+|    1/1   Ad cache & wallpaper    |  [x] Disable Settings / Start suggestions               |
+|                                  |                                                         |
+|                                  |                                                         |
+|                                  |Disable Windows Spotlight desktop ad   [low]             |
+|                                  |Subscribed content 338389 is the desktop wallpaper/icon …|
+|                                  |Touches: HKCU\Software\Microsoft\Windows\CurrentVersion\…|
+|                                  |                                                         |
+|                                  |                                                         |
+|                                  |                                                         |
+|                                  |                                                         |
+|                                  |                                                         |
++----------------------------------+---------------------------------------------------------+
+| up/down move  Tab pane  Enter toggle  1/2/3 preset  ? help  x apply  q quit                |
+| space toggles  .  p previews  .  x applies                                                 |
++--------------------------------------------------------------------------------------------+
 ```
-   ------------------------------------------------------------------
-   WinCleanKit   Windows 11 广告 / 遥测 / 预装清理
-   ------------------------------------------------------------------
-   预设: balanced      语言: zh
-   风险等级:  低 = 可逆、无副作用     中 = 有可见取舍     高 = 会删除程序或数据
 
-   当前计划: 共 60 项, 最高风险 [中]   (手动加 0 / 手动减 0)
+| Key | Action |
+|---|---|
+| `up` `down` | move within the focused pane |
+| `Tab` | switch between the category pane and the action pane |
+| `Enter` | open a category; in the action pane, toggle and step down |
+| `space` | toggle the current action |
+| `1` `2` `3` | preset: conservative / balanced / aggressive |
+| `a` / `n` | select / clear every action in the category |
+| `A` / `N` | select / clear everything |
+| `l` | switch interface language (English / Chinese) |
+| `p` / `x` / `q` | preview the plan / apply it / quit |
+| `?` | the same help, in-app |
 
-   ------------------------------------------------------------------
-   主菜单
-   ------------------------------------------------------------------
-   1. 选择预设            (conservative / balanced / aggressive)
-   2. 按分类选择          (勾选整个分类)
-   3. 逐项自定义          (每个动作单独开关)
-   4. 预览当前计划        (不修改任何东西)
-   5. 执行                (会再次确认，先备份)
-   6. 还原                (从桌面还原点恢复)
-   7. 切换语言            (当前 zh)
-   8. 关于
-   0. 退出
-```
+The TUI does not reimplement anything that keeps you safe. Previewing calls the
+engine's own plan renderer, and applying hands the chosen ids back to the engine:
 
-Previewing a plan — one aligned table, risk visible per action:
-
-```
+```text
    ------------------------------------------------------------------
    WinCleanKit 0.1.0
    ------------------------------------------------------------------
@@ -49,17 +72,10 @@ Previewing a plan — one aligned table, risk visible per action:
    Selected : 74 action(s)
    Mode     : PREVIEW ONLY
 
-   系统广告与推荐            22 action(s)
-     [low ] 禁止静默自动安装应用
-     [low ] 关闭订阅内容(推荐/广告)
-     [MED ] 隐藏设置首页推广区块
-
-   预装应用                  11 action(s)
-     [low ] 卸载 Windows 地图
-     [MED ] 卸载媒体播放器(ZuneMusic)
-
-   OneDrive                  1 action(s)
-     [HIGH] 移除 OneDrive 客户端并阻止重装
+   Ads & suggestions         22 action(s)
+     [low ] Forbid silent app installation
+     [low ] Disable subscribed content (recommendations/ads)
+     [MED ] Hide Settings home page promos
 
    Total actions : 74
    Highest risk  : high
@@ -68,20 +84,19 @@ Previewing a plan — one aligned table, risk visible per action:
 Applying it — a progress counter, and one status vocabulary where the text marker
 carries the meaning, so nothing depends on colour:
 
-```
-   ------------------------------------------------------------------
-   Applying changes
-   ------------------------------------------------------------------
-   Backup / restore : C:\Users\you\Desktop\WinCleanKit-20260913-004942
-
-   系统广告与推荐
-     [ok]  [  1/74]   1%  禁止静默自动安装应用 — HKCU\SilentInstalledAppsEnabled = 0
-     [--]  [  5/74]   6%  卸载 Windows 地图 — not installed
-     [!!]  [ 12/74]  16%  隐藏设置首页推广区块 — key accepted the write but dropped it
-     [XX]  [ 40/74]  54%  某动作 — access denied
+```text
+   [ok]  [  1/74]   1%  Forbid silent app installation — HKCU\SilentInstalledAppsEnabled = 0
+   [--]  [  5/74]   6%  Uninstall Windows Maps — not installed
+   [!!]  [ 12/74]  16%  Hide Settings home page promos — key accepted the write but dropped it
+   [XX]  [ 40/74]  54%  Something — access denied
 ```
 
 Legend: `[ok]` applied · `[dry]` would apply · `[--]` not applicable · `[!!]` skipped or protected · `[XX]` failed.
+
+> **No console for a full-screen UI?** `run.bat --simple` (or
+> `WinCleanKit.ps1 -Tui:$false`) gives you the plain numbered menu instead. The TUI
+> also detects that situation itself and falls back, rather than painting escape
+> codes into a log file.
 
 ## Why another de-bloater?
 
@@ -221,7 +236,7 @@ WinCleanKit/
 │   └── menu/menu.ps1            menu data provider (keeps batch free of JSON parsing)
 ├── catalog/catalog.json         all 74 actions as data
 ├── docs/                        catalog, usage, safety, limitations, linting
-├── tests/                       six gates: parse, lint, docs, catalog, engine
+├── tests/                       eight gates incl. TUI logic and layout
 ├── tools/                       New-CatalogDoc.ps1 (generates the bilingual catalog)
 ├── .github/workflows/           CI (mirrored in .gitea/workflows)
 └── localization/                UI strings
@@ -278,11 +293,16 @@ Adding an action is usually a small JSON change. Please read [CONTRIBUTING.md](C
 # Data integrity, safety invariants, behaviour
 .\tests\Test-Catalog.ps1
 .\tests\Test-Engine.ps1
+
+# TUI: the logic and the layout are pure functions, so they are tested too.
+# (The key loop needs a real console and is verified by hand — see Tui.Input.ps1.)
+.\tests\Test-Tui.ps1
+.\tests\Test-TuiRender.ps1
 ```
 
-All six gates run in CI. Current state: parser 27 checks, PSScriptAnalyzer
-`0 errors / 0 warnings`, docs 5 checks (224 links), catalog 31 checks, engine 23
-checks. See [LINTING.md](docs/LINTING.md).
+All eight gates run in CI. Current state: parser 37 checks, PSScriptAnalyzer
+`0 errors / 0 warnings`, docs 5 checks (229 links), catalog 31 checks, engine 23
+checks, TUI logic 55 checks, TUI layout 50 checks. See [LINTING.md](docs/LINTING.md).
 
 ---
 

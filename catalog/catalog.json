@@ -4,7 +4,7 @@
   "categories": [
     {
       "id": "ads",
-      "name": "Windows ads & suggestions",
+      "name": "Ads & suggestions",
       "name_zh": "系统广告与推荐",
       "description": "Turns off Microsoft's own promotional surfaces: Start menu recommendations, Settings suggestions, lock-screen Spotlight ads, search-box web suggestions, widget feed, and the desktop 'Learn about this picture' icon.",
       "description_zh": "关闭微软自家推广位：开始菜单推荐、设置页建议、锁屏 Spotlight 广告、搜索框联网推荐、小组件资讯流、桌面“了解此图片”图标。",
@@ -12,7 +12,7 @@
     },
     {
       "id": "telemetry",
-      "name": "Telemetry & diagnostic data",
+      "name": "Telemetry & diagnostics",
       "name_zh": "遥测与诊断数据",
       "description": "Stops diagnostic data collection: the DiagTrack service, compatibility appraiser, CEIP uploads, error reporting and feedback requests.",
       "description_zh": "停止诊断数据采集：DiagTrack 服务、兼容性评估、CEIP 上报、错误报告与反馈请求。",
@@ -36,7 +36,7 @@
     },
     {
       "id": "privacy",
-      "name": "Privacy hardening",
+      "name": "Privacy",
       "name_zh": "隐私加固",
       "description": "Advertising ID, input personalization, implicit text/ink collection, location, settings sync and per-app diagnostic access.",
       "description_zh": "广告标识符、输入个性化、文本/手写隐式采集、定位、设置同步、应用诊断信息访问权限。",
@@ -44,7 +44,7 @@
     },
     {
       "id": "cache",
-      "name": "Ad image cache & wallpaper",
+      "name": "Ad cache & wallpaper",
       "name_zh": "广告图缓存与壁纸",
       "description": "Deletes already-downloaded Spotlight ad images. Refuses to touch your current wallpaper or its transcoded copy.",
       "description_zh": "删除已下载的 Spotlight 广告图。不会触碰你当前的壁纸及其转码副本。",

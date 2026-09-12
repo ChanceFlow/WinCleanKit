@@ -66,8 +66,31 @@ if errorlevel 1 (
 )
 
 rem ===========================================================================
-rem  Helpers
+rem  Default path: hand the session to the PowerShell TUI.
+rem
+rem  cmd cannot read arrow keys, so a full-screen interface is impossible here.
+rem  This file therefore does one thing well -- elevation -- and delegates the
+rem  interface. Pass --simple (or --no-tui) for the numbered menu further down,
+rem  which suits automation, screen readers, and consoles without ANSI support.
 rem ===========================================================================
+set "WCK_SIMPLE="
+for %%A in (%*) do (
+    if /i "%%A"=="--simple" set "WCK_SIMPLE=1"
+    if /i "%%A"=="--no-tui" set "WCK_SIMPLE=1"
+)
+if not defined WCK_SIMPLE (
+    "%WCK_PS%" -NoProfile -ExecutionPolicy Bypass -File "%WCK_ENGINE%" -Tui
+    set "WCK_RC=!ERRORLEVEL!"
+    if "!WCK_RC!"=="0" (
+        endlocal
+        exit /b 0
+    )
+    echo.
+    echo   [!] The interactive UI could not start ^(exit !WCK_RC!^).
+    echo       Falling back to the plain menu.
+    echo.
+    pause
+)
 goto :main
 
 :psrun
