@@ -13,11 +13,17 @@ setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul 2>&1
 title WinCleanKit
 
+rem This file lives in the src folder, so the repository root is its parent.
+rem The root is derived with the full-path modifier of a for variable rather than
+rem from the current directory, whose trailing backslash differs between a drive
+rem root and a subdirectory. Keep this comment free of parameter substitution
+rem syntax: cmd expands those even inside rem, which is a syntax error at parse.
 cd /d "%~dp0"
-set "WCK_ROOT=%CD%"
+for %%I in ("%~dp0..") do set "WCK_ROOT=%%~fI"
 set "WCK_ENGINE=%WCK_ROOT%\src\WinCleanKit.ps1"
 set "WCK_MENU=%WCK_ROOT%\src\menu\menu.ps1"
 set "WCK_TMP=%TEMP%\wck-%RANDOM%%RANDOM%"
+
 set "WCK_STATE=%WCK_TMP%\state"
 set "WCK_PLUS=%WCK_STATE%\plus.txt"
 set "WCK_MINUS=%WCK_STATE%\minus.txt"
@@ -65,6 +71,28 @@ if errorlevel 1 (
     exit /b
 )
 
+rem Fail loudly and specifically if the tree is incomplete, rather than letting
+rem PowerShell report a confusing path error several steps later.
+set "WCK_BAD="
+if not exist "%WCK_ENGINE%" set "WCK_BAD=%WCK_ENGINE%"
+if not exist "%WCK_MENU%"   set "WCK_BAD=%WCK_MENU%"
+if defined WCK_BAD (
+    echo.
+    echo   [X] A required file is missing:
+    echo       %WCK_BAD%
+    echo.
+    echo       Expected the repository layout:
+    echo         WinCleanKit\run.bat
+    echo         WinCleanKit\src\WinCleanKit.bat
+    echo         WinCleanKit\src\WinCleanKit.ps1
+    echo         WinCleanKit\src\menu\menu.ps1
+    echo       If you extracted the archive into a folder of the same name,
+    echo       move the inner folder up so this file sits at the top level.
+    echo.
+    pause
+    endlocal
+    exit /b 1
+)
 rem ===========================================================================
 rem  Default path: hand the session to the PowerShell TUI.
 rem
@@ -79,17 +107,21 @@ for %%A in (%*) do (
     if /i "%%A"=="--no-tui" set "WCK_SIMPLE=1"
 )
 if not defined WCK_SIMPLE (
-    "%WCK_PS%" -NoProfile -ExecutionPolicy Bypass -File "%WCK_ENGINE%" -Tui
+    "%WCK_PS%" -NoProfile -ExecutionPolicy Bypass -File "%WCK_ENGINE%" -Tui --tui-exit-code
     set "WCK_RC=!ERRORLEVEL!"
     if "!WCK_RC!"=="0" (
         endlocal
         exit /b 0
     )
-    echo.
-    echo   [!] The interactive UI could not start ^(exit !WCK_RC!^).
-    echo       Falling back to the plain menu.
-    echo.
-    pause
+    if "!WCK_RC!"=="3" (
+        echo.
+        echo   [i] No interactive console here, so using the plain menu.
+    ) else (
+        echo.
+        echo   [!] The interactive UI exited with code !WCK_RC!.
+    )
+    echo       Continuing with the plain numbered menu.
+    timeout /t 2 >nul 2>&1
 )
 goto :main
 

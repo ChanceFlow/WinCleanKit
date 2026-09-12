@@ -6,6 +6,42 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **`run.bat` / `WinCleanKit.bat` could not start at all.** Two independent bugs,
+  both introduced by the TUI work and both reported from a real run:
+  - The repository root was derived with `%CD%` *after* `cd`-ing into `src\`, so
+    every path it built pointed at `src\src\...` and PowerShell failed with
+    "The argument ... does not exist". The root is now resolved from the batch
+    file's own location (`for %%I in ("%~dp0..") do set "WCK_ROOT=%%~fI"`), which
+    does not depend on the current directory.
+  - A comment contained batch parameter-substitution syntax (`%~fI`). cmd expands
+    those **even inside `rem`**, so the file failed at parse time with "the
+    following usage of the path operator in batch-parameter substitution is
+    invalid" and printed nothing useful. The comment no longer contains it.
+  - `WinCleanKit.bat` also gained a preflight check: if the expected files are
+    missing it now names the exact missing path and prints the expected layout,
+    instead of letting PowerShell report a confusing path error several steps on.
+- **The plain menu was unreachable when the TUI could not start.** The TUI
+  reported the fallback and then exited 0, so the front-end treated that as
+  success and terminated silently. The TUI now distinguishes "this console cannot
+  draw" (exit 3) from "the user quit" (exit 0), and the front-end falls through to
+  the numbered menu on 3.
+- A duplicated block-comment terminator and a stale function name in
+  `Tui.Input.ps1`, and a name that a bulk rename had doubled into
+  `Show-TuiSessionSession`. Three functions now have distinct names:
+  `Open-InteractiveSession` (engine wrapper), `Start-TuiSession` (entry point),
+  `Show-TuiInteraction` (the key loop).
+
+### Notes
+
+- The path fix and the parse-error fix were both verified on Windows by invoking
+  the batch file directly, in both call styles (`WinCleanKit.bat` from `src\` and
+  via the root `run.bat`).
+- The remaining fixes in this entry are **statically** verified only (label and
+  variable consistency, encoding rules, no parameter substitution in comments).
+  A full gate run and a manual TUI session are still outstanding.
+
 ### Added
 
 - **A full-screen TUI.** The interactive interface is now a keyboard-driven,

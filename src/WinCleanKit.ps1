@@ -79,7 +79,11 @@ param(
     [ValidateSet('conservative', 'balanced', 'aggressive')]
     [string]   $TuiPreset = 'balanced',
     [ValidateSet('en', 'zh')]
-    [string]   $TuiLanguage = 'en'
+    [string]   $TuiLanguage = 'en',
+    # Report the interactive outcome as an exit code rather than as text, so a
+    # caller can tell "this console cannot draw" (3) from "the user quit" (0).
+    # src\WinCleanKit.bat uses that difference to decide whether to fall back.
+    [switch]   $TuiExitCode
 )
 
 # Version 2.0 (not Latest): catalog entries have optional properties per target
@@ -752,7 +756,7 @@ function Write-CatalogJson {
 # Interactive mode
 # --------------------------------------------------------------------------
 
-function Show-TuiSessionSession {
+function Open-InteractiveSession {
     <#
       Load the TUI libraries and run one interactive session.
 
@@ -763,7 +767,7 @@ function Show-TuiSessionSession {
     [CmdletBinding()]
     param([string]$TuiPreset)
 
-    $result = Show-TuiSession -Catalog (Get-Catalog) -Engine $PSCommandPath `
+    $result = Start-TuiSession -Catalog (Get-Catalog) -Engine $PSCommandPath `
                          -Preset $TuiPreset -Language $TuiLanguage
 
     if (-not $result) { return $null }
@@ -776,7 +780,7 @@ function Show-TuiSessionSession {
 # The TUI lives in three library files. They are dot-sourced here, at script
 # scope, and only when interactive mode is actually requested: dot-sourcing from
 # inside a function would bind every definition to that function's scope, which is
-# why the load cannot live in Show-TuiSessionSession.
+# why the load cannot live in Open-InteractiveSession.
 # --------------------------------------------------------------------------
 if ($Tui -and -not $NoTui) {
     foreach ($f in 'Tui.Logic.ps1', 'Tui.Render.ps1', 'Tui.Input.ps1') {
@@ -804,8 +808,13 @@ try {
     # result to the same resolution/execution path as every other mode rather than
     # duplicating preview, apply or backup logic.
     if ($Tui -and -not $NoTui) {
-        $tuiPlan = Show-TuiSessionSession -TuiPreset $TuiPreset
+        $tuiPlan = Open-InteractiveSession -TuiPreset $TuiPreset
         if (-not $tuiPlan) {
+            if ($TuiExitCode) {
+                # 3 means "this console cannot draw the TUI"; the front-end then
+                # falls back to the numbered menu. 0 means the user quit.
+                exit $(if ($script:TuiExitCode) { $script:TuiExitCode } else { 0 })
+            }
             Write-Info 'Nothing selected; no changes were made.'
             return
         }

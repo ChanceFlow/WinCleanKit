@@ -111,7 +111,6 @@ function Show-TuiPlan {
       Preview: the engine already renders the plan well, so reuse it rather than
       duplicating the presentation. The TUI is suspended while it prints.
     #>
-    #>
     [CmdletBinding()]
     param($Plan, [string]$Language, $Engine, [string]$Preset = 'balanced')
     try {
@@ -126,7 +125,7 @@ function Show-TuiPlan {
     $null = [Console]::ReadKey($true)
 }
 
-function Invoke-TuiLoop {
+function Show-TuiInteraction {
     <#
       Run the interactive loop until the user quits or confirms.
 
@@ -246,11 +245,10 @@ function Invoke-TuiLoop {
     return $null
 }
 
-function Show-TuiSession {
+function Start-TuiSession {
     <#
       Entry point. Prepares the terminal, runs the loop, restores the terminal, and
       returns the confirmed plan (or $null). Never changes the system itself.
-    #>
     #>
     [CmdletBinding()]
     param(
@@ -260,20 +258,26 @@ function Show-TuiSession {
         [string]$Language = 'en'
     )
 
+    # Three outcomes are reported distinctly so a caller can tell "cannot draw
+    # here" from "the user quit": $script:TuiExitCode stays 3 for the former and
+    # 0 for the latter. src\WinCleanKit.bat depends on that difference to decide
+    # whether to fall back to the numbered menu.
     if (-not (Test-TuiSupported)) {
-        Write-Host '  The interactive UI needs a console window; falling back to plain output.' -ForegroundColor Yellow
+        $script:TuiExitCode = 3
+        Write-Host '  [!] No interactive console, so the full-screen UI cannot start.' -ForegroundColor Yellow
         return $null
     }
     if (-not (Enable-TuiAnsi)) {
-        Write-Host '  This console cannot render the interactive UI.' -ForegroundColor Yellow
-        Write-Host '  Use  run.bat --simple  for the plain interface.' -ForegroundColor Yellow
+        $script:TuiExitCode = 3
+        Write-Host '  [!] This console cannot render the full-screen UI.' -ForegroundColor Yellow
         return $null
     }
 
+    $script:TuiExitCode = 0
     $state = Initialize-TuiState -Catalog $Catalog -Preset $Preset -Language $Language
     Enter-TuiScreen
     try {
-        return Invoke-TuiLoop -EngineState $state -Engine $Engine
+        return Show-TuiInteraction -EngineState $state -Engine $Engine
     } finally {
         Exit-TuiScreen
     }
