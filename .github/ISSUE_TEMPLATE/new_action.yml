@@ -1,0 +1,74 @@
+name: New action proposal
+description: Propose a new de-bloat action for the catalog
+labels: ['catalog']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Adding an action is usually a small JSON change. This form collects what is
+        needed to judge whether it belongs, and in which preset.
+  - type: input
+    id: what
+    attributes:
+      label: What should it turn off or remove?
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Windows ads & suggestions (ads)
+        - Telemetry & diagnostic data (telemetry)
+        - Preinstalled apps (apps)
+        - OneDrive (onedrive)
+        - Privacy hardening (privacy)
+        - Ad image cache & wallpaper (cache)
+        - A new category
+    validations:
+      required: true
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Suggested risk level
+      description: See CONTRIBUTING.md for the definitions.
+      options:
+        - low — no visible behaviour change
+        - medium — something visible changes or cached content is deleted
+        - high — removes a program or blocks a capability
+    validations:
+      required: true
+  - type: textarea
+    id: target
+    attributes:
+      label: How would it be implemented?
+      description: |
+        The registry key/value, service, scheduled task, Appx package name, or cache path.
+      placeholder: |
+        HKCU\Software\...\Something
+        ValueName = 0 (DWord)
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why does it exist, and what does it cost the user?
+      description: This becomes the `why` string, which is the user's only basis for deciding.
+    validations:
+      required: true
+  - type: input
+    id: verified
+    attributes:
+      label: Windows build you verified it on
+      placeholder: e.g. Windows 11 Pro 26200
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirm
+      options:
+        - label: It does not modify the hosts file
+          required: true
+        - label: It does not disable Windows Update, Defender, the firewall or BitLocker
+          required: true
+        - label: It does not touch user data, the wallpaper, or the OneDrive data folder
+          required: true

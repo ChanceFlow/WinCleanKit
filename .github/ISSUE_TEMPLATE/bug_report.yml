@@ -1,0 +1,56 @@
+name: Bug report
+description: Something did not do what it should, or did something it should not
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The two things that make a bug fixable fastest are the
+        exact action id and the relevant lines from `run.log`.
+  - type: input
+    id: windows
+    attributes:
+      label: Windows edition and build
+      description: Output of `winver`, e.g. "Windows 11 Pro 26200.9444"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: WinCleanKit version or commit
+      description: Engine version (`-Version`) or the commit you are on
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Include the exact command or menu path you used.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: input
+    id: action-ids
+    attributes:
+      label: Affected action ids
+      description: e.g. `telemetry.svc.diagtrack`. Use "unknown" if the UI did not name one.
+  - type: textarea
+    id: log
+    attributes:
+      label: Relevant run.log lines
+      description: |
+        From `Desktop\WinCleanKit-<timestamp>\run.log`. Paste the lines for the
+        affected action, including any `[FAIL]`, `[WARN]` or `[skip]` markers.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I read the preview before applying
+        - label: I checked docs/LIMITATIONS.md (some keys are protected by Windows by design)

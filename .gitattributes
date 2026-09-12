@@ -1,0 +1,20 @@
+# Normalize line endings explicitly: Windows scripts must keep CRLF.
+* text=auto eol=lf
+
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.json  text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+
+# Binary
+*.png binary
+*.ico binary
+*.exe binary
+
+# PowerShell files carry a UTF-8 BOM (so Windows PowerShell 5.1 decodes them as
+# UTF-8 instead of the ANSI codepage). Never let git rewrite their bytes.
+*.ps1  -text
+*.psm1 -text
+*.psd1 -text
