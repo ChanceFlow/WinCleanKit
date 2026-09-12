@@ -8,6 +8,34 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- **Bilingual documentation.** `docs/USAGE`, `docs/SAFETY`, `docs/LIMITATIONS`,
+  `CONTRIBUTING`, `SECURITY` and `CODE_OF_CONDUCT` now have Chinese counterparts,
+  and every bilingual file carries a language switcher that links to its
+  counterpart in both directions.
+- **`tests/Test-Docs.ps1`** — the documentation gate: every relative link must
+  resolve, every translatable document must have a `.zh-CN.md` that links back,
+  the switcher must be near the top, and no tracked file may contain a private
+  network address.
+- **`tools/New-CatalogDoc.ps1`** — the catalog documentation generator, now part of
+  the repository instead of a throwaway script. It emits `docs/CATALOG.md` and its
+  Chinese pointer, and `-Check` verifies the committed files are current so CI
+  catches a catalog edit that forgot to regenerate.
+- `docs/CATALOG.md` is now bilingual: each of the 74 actions lists its English and
+  Chinese title and rationale together, rather than in two copies that would drift.
+
+### Changed
+
+- The `origin` remote points at the public GitHub URL. The internal Gitea mirror is
+  a separate remote named `gitea`, so a clone never reveals an internal address
+  through `git remote -v`.
+
+### Notes
+
+- `CONTRIBUTING.md` now documents the bilingual contract, the English-only exceptions
+  (with reasons), and the rule against committing internal addresses.
+
+### Added
+
 - **`tests/Test-Parse.ps1`** — the syntax gate. Parses every PowerShell file and
   verifies the file-encoding rules (BOM for `.ps1`/`.psd1`, no BOM and CRLF for `.bat`).
 - **`tests/Test-Analyzer.ps1`** — the lint gate, runnable locally and in CI.

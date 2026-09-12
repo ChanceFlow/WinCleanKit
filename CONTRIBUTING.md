@@ -1,3 +1,5 @@
+[English](CONTRIBUTING.md) · [中文](CONTRIBUTING.zh-CN.md) · **Docs:** [README](README.md) · [Usage](docs/USAGE.md) · [Safety](docs/SAFETY.md) · [Limitations](docs/LIMITATIONS.md) · [Catalog](docs/CATALOG.md) · [Linting](docs/LINTING.md)
+
 # Contributing to WinCleanKit
 
 Thanks for helping. Most contributions are a small edit to one JSON file, so this is short.
@@ -100,6 +102,34 @@ Two encoding rules, both enforced by the test suite because getting them wrong p
 ## Documentation
 
 `docs/CATALOG.md` is **generated** from the catalog. Do not edit it by hand; regenerate it if you add actions. The READMEs describe behaviour and should be updated when behaviour changes.
+
+**Bilingual documentation is mandatory.** Every document needs a language switcher at
+the top, and the two language versions must link to **each other** — a one-way link
+fails CI. A new `X.md` requires an `X.zh-CN.md` (and vice versa). The switcher must name
+real filenames; a link that points only at the file it lives in is rejected.
+
+| English | Chinese |
+|---|---|
+| [`README.md`](README.md) | [`README.zh-CN.md`](README.zh-CN.md) |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | [`CONTRIBUTING.zh-CN.md`](CONTRIBUTING.zh-CN.md) |
+| [`SECURITY.md`](SECURITY.md) | [`SECURITY.zh-CN.md`](SECURITY.zh-CN.md) |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | [`CODE_OF_CONDUCT.zh-CN.md`](CODE_OF_CONDUCT.zh-CN.md) |
+| [`docs/USAGE.md`](docs/USAGE.md) | [`docs/USAGE.zh-CN.md`](docs/USAGE.zh-CN.md) |
+| [`docs/SAFETY.md`](docs/SAFETY.md) | [`docs/SAFETY.zh-CN.md`](docs/SAFETY.zh-CN.md) |
+| [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) | [`docs/LIMITATIONS.zh-CN.md`](docs/LIMITATIONS.zh-CN.md) |
+| [`docs/CATALOG.md`](docs/CATALOG.md) | [`docs/CATALOG.zh-CN.md`](docs/CATALOG.zh-CN.md) — the catalog itself is bilingual; the Chinese page is a pointer |
+
+English-only by decision (not by omission): [`CHANGELOG.md`](CHANGELOG.md) (a changelog
+is a technical log, and per-language copies drift), [`docs/LINTING.md`](docs/LINTING.md)
+(contributor-facing), [`localization/README.md`](localization/README.md) (it is about
+translations).
+
+**Never commit internal addresses.** No private IPs, internal hostnames, or private
+service endpoints in code, docs, commit messages, or a remote URL. `tests/Test-Docs.ps1`
+enforces this for tracked files.
+
+`tests/Test-Docs.ps1` checks all of the above: link resolution, pair completeness,
+bidirectional linking, switcher placement, and the absence of private addresses.
 
 ## Commits and pull requests
 

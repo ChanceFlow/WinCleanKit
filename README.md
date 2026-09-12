@@ -19,7 +19,9 @@
      0. Quit
 ```
 
-**English** · [中文说明](README.zh-CN.md) · [Action catalog](docs/CATALOG.md) · [Usage](docs/USAGE.md) · [Safety](docs/SAFETY.md) · [Limitations](docs/LIMITATIONS.md)
+**English** · [中文说明](README.zh-CN.md)  
+**Docs / 文档:** [Usage](docs/USAGE.md) ([中文](docs/USAGE.zh-CN.md)) · [Safety](docs/SAFETY.md) ([中文](docs/SAFETY.zh-CN.md)) · [Limitations](docs/LIMITATIONS.md) ([中文](docs/LIMITATIONS.zh-CN.md)) · [Catalog](docs/CATALOG.md) ([中文](docs/CATALOG.zh-CN.md)) · [Linting](docs/LINTING.md)  
+**Project / 项目:** [Contributing](CONTRIBUTING.md) ([中文](CONTRIBUTING.zh-CN.md)) · [Security](SECURITY.md) ([中文](SECURITY.zh-CN.md)) · [Code of Conduct](CODE_OF_CONDUCT.md) ([中文](CODE_OF_CONDUCT.zh-CN.md)) · [Changelog](CHANGELOG.md) · [License](LICENSE)
 
 ---
 
@@ -153,7 +155,8 @@ WinCleanKit/
 │   └── menu/menu.ps1            menu data provider (keeps batch free of JSON parsing)
 ├── catalog/catalog.json         all 74 actions as data
 ├── docs/                        catalog reference, usage, safety, limitations, linting
-├── tests/                       parse, lint, catalog and engine gates
+├── tests/                       parse, lint, docs, catalog and engine gates
+├── tools/                       New-CatalogDoc.ps1 (generates the bilingual catalog)
 ├── .github/workflows/           CI
 └── localization/                UI strings
 ```
@@ -178,17 +181,37 @@ Adding an action is usually a small JSON change. Please read [CONTRIBUTING.md](C
 # Lint gate: PSScriptAnalyzer (needs Install-Module PSScriptAnalyzer -Scope CurrentUser)
 .\tests\Test-Analyzer.ps1
 
+# Documentation gate: links resolve, bilingual pairs are complete and cross-linked,
+# and no internal addresses leaked into the repository
+.\tests\Test-Docs.ps1
+
+# Generated catalog is up to date
+.\tools\New-CatalogDoc.ps1 -Check
+
 # Data integrity, safety invariants, behaviour
 .\tests\Test-Catalog.ps1
 .\tests\Test-Engine.ps1
 ```
 
-All four gates also run in CI. Current state: parser clean, PSScriptAnalyzer
-`0 errors / 0 warnings`, catalog 31 checks, engine 23 checks. See
-[LINTING.md](docs/LINTING.md).
+All six gates run in CI. Current state: parser 27 checks, PSScriptAnalyzer
+`0 errors / 0 warnings`, docs 5 checks (224 links), catalog 31 checks, engine 23
+checks. See [LINTING.md](docs/LINTING.md).
 
 ---
 
 ## License
 
 [MIT](LICENSE). Use it, fork it, ship it. No warranty — it changes system settings, so read what you select.
+
+---
+
+## Documentation conventions
+
+These docs are bilingual. **Every document carries a language switcher at the top, and the
+two language versions link to each other** — a one-way link fails CI. A new `X.md` requires
+an `X.zh-CN.md`. The full mapping and rules are in
+[CONTRIBUTING.md](CONTRIBUTING.md#commits-and-pull-requests).
+
+**Internal addresses are not allowed in this repository** — private IPs, internal
+hostnames, or private service ports, in code, docs, commit messages, or a remote URL.
+`tests/Test-Docs.ps1` enforces this automatically.

@@ -1,3 +1,5 @@
+[English](SAFETY.md) · [中文](SAFETY.zh-CN.md) · **Docs:** [README](../README.md) · [Usage](USAGE.md) · [Safety](SAFETY.md) · [Limitations](LIMITATIONS.md) · [Catalog](CATALOG.md) · [Linting](LINTING.md)
+
 # Safety
 
 WinCleanKit changes operating-system settings. That deserves plain talk about what it does, what it refuses to do, and how to get back.

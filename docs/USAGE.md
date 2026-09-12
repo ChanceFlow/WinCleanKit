@@ -1,3 +1,5 @@
+[English](USAGE.md) · [中文](USAGE.zh-CN.md) · **Docs:** [README](../README.md) · [Usage](USAGE.md) · [Safety](SAFETY.md) · [Limitations](LIMITATIONS.md) · [Catalog](CATALOG.md) · [Linting](LINTING.md)
+
 # Usage
 
 Everything the `.bat` menu does can be done from the command line, and the command line can do more. This is the same engine either way.

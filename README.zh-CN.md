@@ -19,7 +19,9 @@
      0. 退出
 ```
 
-[English](README.md) · [行动目录](docs/CATALOG.md) · [安全说明](docs/SAFETY.md) · [已知限制](docs/LIMITATIONS.md) · [参与贡献](CONTRIBUTING.md)
+[English](README.md) · **中文说明**  
+**文档:** [用法](docs/USAGE.zh-CN.md) ([EN](docs/USAGE.md)) · [安全](docs/SAFETY.zh-CN.md) ([EN](docs/SAFETY.md)) · [限制](docs/LIMITATIONS.zh-CN.md) ([EN](docs/LIMITATIONS.md)) · [行动目录](docs/CATALOG.md) ([EN](docs/CATALOG.md)) · [代码规范](docs/LINTING.md)  
+**项目:** [参与贡献](CONTRIBUTING.zh-CN.md) ([EN](CONTRIBUTING.md)) · [安全政策](SECURITY.zh-CN.md) ([EN](SECURITY.md)) · [行为准则](CODE_OF_CONDUCT.zh-CN.md) ([EN](CODE_OF_CONDUCT.md)) · [更新日志](CHANGELOG.md) · [许可证](LICENSE)
 
 ---
 
@@ -153,7 +155,8 @@ WinCleanKit/
 │   └── menu/menu.ps1            菜单数据提供者（让 bat 不必解析 JSON）
 ├── catalog/catalog.json         全部 74 条操作，以数据形式存在
 ├── docs/                        目录参考、用法、安全、限制、代码规范
-├── tests/                       语法、规范、catalog 与引擎四道门禁
+├── tests/                       语法、规范、文档、catalog 与引擎门禁
+├── tools/                       New-CatalogDoc.ps1（生成双语行动目录）
 ├── .github/workflows/           CI
 └── localization/                UI 文案
 ```
@@ -178,13 +181,19 @@ WinCleanKit/
 # 代码规范门禁：PSScriptAnalyzer（需先 Install-Module PSScriptAnalyzer -Scope CurrentUser）
 .\tests\Test-Analyzer.ps1
 
+# 文档门禁：链接可达、中英双语成对且双向互链、仓库内无内网地址
+.\tests\Test-Docs.ps1
+
+# 生成的行动目录是否为最新
+.\tools\New-CatalogDoc.ps1 -Check
+
 # 数据完整性与行为验证
 .\tests\Test-Catalog.ps1
 .\tests\Test-Engine.ps1
 ```
 
-四道门禁在 CI 中都会跑。当前状态：解析器全过、PSScriptAnalyzer
-`0 Error / 0 Warning`、Catalog 31 项、Engine 23 项。详见
+六道门禁在 CI 中都会跑。当前状态：解析器 27 项、PSScriptAnalyzer
+`0 Error / 0 Warning`、文档 5 项（224 条链接）、Catalog 31 项、Engine 23 项。详见
 [LINTING.md](docs/LINTING.md)。
 
 ---
@@ -192,3 +201,14 @@ WinCleanKit/
 ## 许可证
 
 [MIT](LICENSE)。随便用、随便 fork、随便发布。不提供任何担保 —— 它会修改系统设置，请看清你选了什么。
+
+---
+
+## 文档规范
+
+本项目文档中英双语，**每份文档顶部都有语言导航，且两个版本互相指向**。新增文档时必须同时提供
+`X.md` 与 `X.zh-CN.md`，否则 `tests/Test-Docs.ps1` 会让 CI 失败。完整对照表与规则见
+[CONTRIBUTING.zh-CN.md](CONTRIBUTING.zh-CN.md#中英双语文档规范必须遵守)。
+
+仓库中**不允许出现内网地址**（私有 IP、内网主机名、内网服务端口），代码、文档、提交信息与
+remote 配置都算 —— 这条同样由 `Test-Docs.ps1` 自动检查。

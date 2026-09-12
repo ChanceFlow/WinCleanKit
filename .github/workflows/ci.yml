@@ -38,6 +38,14 @@ jobs:
         shell: pwsh
         run: ./tests/Test-Parse.ps1
 
+      - name: Documentation gate (links, bilingual pairs, no private addresses)
+        shell: pwsh
+        run: ./tests/Test-Docs.ps1
+
+      - name: Generated catalog is current
+        shell: pwsh
+        run: ./tools/New-CatalogDoc.ps1 -Check
+
       - name: Static catalog + encoding tests
         shell: pwsh
         run: ./tests/Test-Catalog.ps1

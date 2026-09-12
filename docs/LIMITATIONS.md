@@ -1,3 +1,5 @@
+[English](LIMITATIONS.md) · [中文](LIMITATIONS.zh-CN.md) · **Docs:** [README](../README.md) · [Usage](USAGE.md) · [Safety](SAFETY.md) · [Limitations](LIMITATIONS.md) · [Catalog](CATALOG.md) · [Linting](LINTING.md)
+
 # Known limitations
 
 Honest boundaries. Some are platform limits no tool can cross, some are deliberate choices.
