@@ -23,16 +23,9 @@ jobs:
         shell: pwsh
         run: Install-Module PSScriptAnalyzer -Force -Scope CurrentUser
 
-      - name: Analyse PowerShell sources
+      - name: Run the lint gate that contributors run locally
         shell: pwsh
-        run: |
-          $issues = Invoke-ScriptAnalyzer -Path ./src -Recurse -Settings ./.github/PSScriptAnalyzerSettings.psd1
-          $issues | Format-Table -AutoSize | Out-String | Write-Host
-          if ($issues.Count -gt 0) {
-            Write-Error "PSScriptAnalyzer found $($issues.Count) issue(s)."
-            exit 1
-          }
-          Write-Host 'No PSScriptAnalyzer issues.'
+        run: ./tests/Test-Analyzer.ps1
 
   test:
     name: Tests (${{ matrix.os }})
@@ -48,6 +41,8 @@ jobs:
         shell: pwsh
         run: ./tests/Test-Catalog.ps1
 
+      # The engine drives Windows-specific APIs (Get-Service, Get-ScheduledTask,
+      # Get-AppxPackage), so its behavioural suite only runs on Windows.
       - name: Engine behaviour tests
         if: runner.os == 'Windows'
         shell: pwsh
