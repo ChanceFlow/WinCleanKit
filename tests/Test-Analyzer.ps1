@@ -41,6 +41,15 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $settings = Join-Path $root '.github/PSScriptAnalyzerSettings.psd1'
 
+# Fail loudly if the ruleset is absent. PSScriptAnalyzer silently falls back to its
+# default rules when -Settings points at a missing file, which would turn this gate
+# into a different, weaker check without anyone noticing.
+if (-not (Test-Path $settings)) {
+    Write-Host ("  ruleset not found: {0}" -f $settings) -ForegroundColor Red
+    Write-Host '  Refusing to run with default rules; the gate would not mean what it says.' -ForegroundColor Red
+    exit 1
+}
+
 function Write-Head([string]$Text) { Write-Host ''; Write-Host "=== $Text ===" -ForegroundColor Cyan }
 
 Write-Head 'PSScriptAnalyzer'

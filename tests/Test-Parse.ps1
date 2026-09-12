@@ -84,6 +84,14 @@ if (Test-Path $batPath) {
     Check 'bat uses CRLF' ($batText.Contains("`r`n")) 'cmd requires CRLF'
 }
 
+Write-Head 'Required files present'
+# These are load-bearing for CI. .gitignore once excluded the analyzer ruleset with
+# a blanket *.psd1, which silently weakened the lint gate in CI but not locally.
+foreach ($rel in '.github/PSScriptAnalyzerSettings.psd1', '.github/workflows/ci.yml',
+                 '.gitea/workflows/ci.yml', 'catalog/catalog.json', 'src/WinCleanKit.ps1') {
+    Check "present: $rel" (Test-Path (Join-Path $root $rel)) 'required for CI or the engine'
+}
+
 Write-Head 'Encoding does not mangle non-ASCII text'
 # Read a Chinese string back the way PowerShell 5.1 would and confirm it survives.
 $engine = Join-Path $root 'src/WinCleanKit.ps1'
