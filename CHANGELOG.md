@@ -8,6 +8,44 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- **A terminal design system.** The engine now owns one palette and one status
+  vocabulary instead of scattering colours and markers through the output:
+  - Semantic colour roles (`brand`, `accent`, `success`, `caution`, `danger`,
+    `muted`) in a single `$script:Ink` table; `src/WinCleanKit.bat` mirrors the
+    same roles so the front-end and the engine read as one product.
+  - **Width-aware alignment.** `Format-Text` measures display width, so CJK
+    tables line up instead of drifting — PowerShell's own `{0,-20}` counts
+    characters, and a Chinese glyph is two columns wide but one character.
+  - **Colour is never the only signal.** Every state carries a text marker
+    (`[ok]`, `[dry]`, `[--]`, `[!!]`, `[XX]`) and colours degrade to plain text
+    when output is redirected, piped, or `NO_COLOR` is set.
+  - **Progress for long runs** (`[ 12/74]  16%`), so a 74-action run never looks
+    frozen.
+  - **A unified status vocabulary**, replacing the previous mix of `[ OK ]`,
+    `[skip ]` and `[would]`.
+- **`run.bat`**, a double-click launcher at the repository root, so the obvious
+  file to open is no longer one hidden under `src\`.
+- The generated restore script now uses the same status vocabulary as the engine.
+
+### Changed
+
+- The front-end no longer calls `CLS` on every screen. It repositions the cursor
+  and redraws over the previous frame, which removes the flash and keeps the last
+  25 lines available as scrollback.
+- The front-end header uses the engine's divider style, so the two surfaces match.
+- The READMEs lead with what the tool actually looks like — real menu, plan and
+  apply output — plus build badges whose numbers are verified against the catalog
+  and the gate results.
+
+### Fixed
+
+- PSScriptAnalyzer caught two problems introduced by the refactor: an empty
+  `catch` block (now documents why swallowing is correct there) and a
+  state-changing verb on a progress helper (`Start-Progress` renamed to
+  `Initialize-Progress`).
+
+### Added
+
 - **Bilingual documentation.** `docs/USAGE`, `docs/SAFETY`, `docs/LIMITATIONS`,
   `CONTRIBUTING`, `SECURITY` and `CODE_OF_CONDUCT` now have Chinese counterparts,
   and every bilingual file carries a language switcher that links to its

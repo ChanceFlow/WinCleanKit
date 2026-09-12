@@ -104,38 +104,194 @@ function L {
     $Object.$Base
 }
 
+# --------------------------------------------------------------------------
+# Terminal design system
+#
+# One place that decides how the console looks, so every surface stays
+# consistent and there is a single point of change:
+#
+#   * Semantic colour roles instead of ad-hoc colours. "success" means success
+#     everywhere; changing the palette is a one-line edit in $script:Ink.
+#   * Display-width-aware padding. Chinese characters occupy two terminal
+#     columns but count as one character, so PowerShell's own "{0,-20}" leaves
+#     CJK tables ragged. Format-Text measures visual width instead.
+#   * Colours degrade to plain text when output is a file, a pipe, or CI, so
+#     logs stay clean and colour is never the only way state is conveyed.
+#   * Nothing here emits ANSI escapes: the 16 console colours behave the same
+#     in conhost, Windows Terminal and PowerShell 7.
+# --------------------------------------------------------------------------
+
+$script:Ink = @{
+    brand    = 'DarkCyan'    # the product frame
+    accent   = 'Cyan'        # section headings
+    success  = 'Green'       # ok
+    caution  = 'Yellow'      # skipped, refused, protected
+    danger   = 'Red'         # real failure
+    muted    = 'DarkGray'    # hints, paths, de-emphasised detail
+    body     = 'Gray'        # default body text
+    riskLow  = 'DarkGray'
+    riskMed  = 'Yellow'
+    riskHigh = 'Red'
+}
+
+function Get-Width {
+    <#
+      Visual width in terminal columns. CJK and full-width punctuation count as
+      two columns; combining marks count as zero.
+    #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
+    param([string]$Text)
+    if (-not $Text) { return 0 }
+    $w = 0
+    foreach ($ch in $Text.ToCharArray()) {
+        $c = [int]$ch
+        if (($c -ge 0x1100 -and $c -le 0x115F) -or
+            ($c -ge 0x2E80 -and $c -le 0xA4CF) -or
+            ($c -ge 0xAC00 -and $c -le 0xD7A3) -or
+            ($c -ge 0xF900 -and $c -le 0xFAFF) -or
+            ($c -ge 0xFE30 -and $c -le 0xFE6F) -or
+            ($c -ge 0xFF00 -and $c -le 0xFF60) -or
+            ($c -ge 0xFFE0 -and $c -le 0xFFE6)) { $w += 2 }
+        elseif (($c -ge 0x0300 -and $c -le 0x036F)) { }
+        else { $w += 1 }
+    }
+    return $w
+}
+
+function Format-Text {
+    <#
+      Pad or truncate to an exact display width, so columns line up in both
+      English and Chinese.
+    #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
+    param([string]$Text, [int]$Width)
+    if ($null -eq $Text) { $Text = '' }
+    $w = Get-Width $Text
+    if ($w -gt $Width) {
+        # Truncate on a display-width budget and mark the cut.
+        $out = ''
+        $used = 0
+        foreach ($ch in $Text.ToCharArray()) {
+            $c = Get-Width ([string]$ch)
+            if (($used + $c) -gt ($Width - 1)) { break }
+            $out += $ch
+            $used += $c
+        }
+        return $out + [char]0x2026
+    }
+    return $Text + (' ' * ($Width - $w))
+}
+
+# Colour only when a human is watching: not redirected, not a pipe, not CI.
+$script:UseColour = $true
+if ($Host.Name -eq 'ServerRemoteHost' -or -not [Environment]::UserInteractive) { $script:UseColour = $false }
+try {
+    if ([Console]::IsOutputRedirected) { $script:UseColour = $false }
+} catch {
+    # Some hosts (notably a few ISE versions) throw from IsOutputRedirected.
+    # Swallowing it is deliberate: an unavailable check must not stop the tool,
+    # and the safe default is simply to keep the current colour setting.
+    $null = $_
+}
+if ($env:NO_COLOR) { $script:UseColour = $false }
+
+function Get-Ink {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
+    param([string]$Role)
+    if (-not $script:UseColour) { return $null }
+    if ($script:Ink.ContainsKey($Role)) { return $script:Ink[$Role] }
+    return $script:Ink['body']
+}
+
+function Write-Ink {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
+    param([string]$Text, [string]$Role = 'body', [switch]$NoNewline)
+    $colour = Get-Ink $Role
+    if ($colour) { Write-Host $Text -ForegroundColor $colour -NoNewline:$NoNewline }
+    else         { Write-Host $Text -NoNewline:$NoNewline }
+}
+
+# --- The single status vocabulary used by every surface --------------------
+# Text markers carry the meaning on their own, so nothing depends on colour.
+$script:Tag = @{
+    ok      = '[ok]  '
+    dry     = '[dry] '
+    skip    = '[--]  '
+    warn    = '[!!]  '
+    fail    = '[XX]  '
+}
+$script:TagRole = @{
+    ok = 'success'; dry = 'accent'; skip = 'muted'; warn = 'caution'; fail = 'danger'
+}
+function Write-Status {
+    param([string]$Kind, [string]$Text)
+    if (-not $script:Tag.ContainsKey($Kind)) { $Kind = 'skip' }
+    Write-Ink ('  ' + $script:Tag[$Kind]) $script:TagRole[$Kind] -NoNewline
+    Write-Ink $Text
+}
+
+# --- Progress: long runs should never look frozen -------------------------
+$script:ProgressTotal = 0
+$script:ProgressIndex = 0
+function Initialize-Progress {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
+    param([int]$Total)
+    $script:ProgressTotal = $Total
+    $script:ProgressIndex = 0
+}
+function Get-ProgressPrefix {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
+    param()
+    $script:ProgressIndex++
+    if ($script:ProgressTotal -le 0) { return '' }
+    $pct = [int](100 * $script:ProgressIndex / $script:ProgressTotal)
+    return ('[{0,3}/{1}] {2,3}%  ' -f $script:ProgressIndex, $script:ProgressTotal, $pct)
+}
+
 function Write-Head {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
         Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
     param([string]$Text)
     Write-Host ''
-    Write-Host ('=' * 68) -ForegroundColor DarkCyan
-    Write-Host "  $Text" -ForegroundColor Cyan
-    Write-Host ('=' * 68) -ForegroundColor DarkCyan
+    Write-Ink ('  ' + ('-' * 66)) 'brand'
+    Write-Ink ("  $Text") 'accent'
+    Write-Ink ('  ' + ('-' * 66)) 'brand'
 }
 function Write-Info {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
         Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
     param([string]$Text)
-    Write-Host "  $Text"
+    Write-Ink "  $Text" 'body'
+}
+function Write-Dim {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
+    param([string]$Text)
+    Write-Ink "  $Text" 'muted'
 }
 function Write-Good {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
         Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
     param([string]$Text)
-    Write-Host "  [ OK ] $Text" -ForegroundColor Green
+    Write-Status 'ok' $Text
 }
 function Write-Warn2 {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
         Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
     param([string]$Text)
-    Write-Host "  [WARN] $Text" -ForegroundColor Yellow
+    Write-Status 'warn' $Text
 }
 function Write-Bad {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
         Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
     param([string]$Text)
-    Write-Host "  [FAIL] $Text" -ForegroundColor Red
+    Write-Status 'fail' $Text
 }
 
 function Get-Catalog {
@@ -207,7 +363,21 @@ function Group-PlanByCategory {
     $groups
 }
 
+function Get-RiskInk {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
+    param([string]$Risk)
+    switch ($Risk) {
+        'low'    { return 'riskLow' }
+        'medium' { return 'riskMed' }
+        'high'   { return 'riskHigh' }
+        default  { return 'body' }
+    }
+}
+
 function Show-Plan {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
     param($Catalog, $Actions)
     $groups = Group-PlanByCategory -Catalog $Catalog -Actions $Actions
     $totalRisk = ($Actions | ForEach-Object { $script:RiskOrder[$_.risk] } | Measure-Object -Maximum).Maximum
@@ -217,16 +387,21 @@ function Show-Plan {
         $cat = $Catalog.categories | Where-Object { $_.id -eq $cid }
         $items = $groups[$cid]
         Write-Host ''
-        Write-Host ("  " + (L $cat 'name')) -ForegroundColor White
+        # Name padded by display width so the count column lines up in English
+        # and Chinese alike; Chinese glyphs are two columns but one character.
+        $catName = L $cat 'name'
+        $catPad  = if ($script:Lang -eq 'zh') { 26 } else { 30 }
+        Write-Ink ("  " + (Format-Text $catName $catPad)) 'accent' -NoNewline
+        Write-Ink ("{0} action(s)" -f $items.Count) 'muted'
         foreach ($a in $items) {
             $tag = switch ($a.risk) {
                 'low'    { 'low ' }
                 'medium' { 'MED ' }
                 'high'   { 'HIGH' }
+                default  { 'low ' }
             }
-            $colour = switch ($a.risk) { 'low' { 'Gray' } 'medium' { 'Yellow' } 'high' { 'Red' } }
-            Write-Host ("    [$tag] ") -ForegroundColor $colour -NoNewline
-            Write-Host (L $a 'title')
+            Write-Ink ("    [$tag] ") (Get-RiskInk $a.risk) -NoNewline
+            Write-Ink (L $a 'title') 'body'
         }
     }
     Write-Host ''
@@ -297,7 +472,7 @@ param()
 $ErrorActionPreference = 'Continue'
 $here  = Split-Path -Parent $MyInvocation.MyCommand.Path
 $json  = Join-Path $here 'backup.json'
-if (-not (Test-Path $json)) { Write-Host "backup.json not found next to this script." -ForegroundColor Red; exit 1 }
+if (-not (Test-Path $json)) { Write-Host "  [XX]  backup.json not found next to this script." -ForegroundColor Red; exit 1 }
 $records = Get-Content $json -Raw -Encoding UTF8 | ConvertFrom-Json
 
 $ok = 0; $failed = 0
@@ -312,37 +487,37 @@ foreach ($r in $records) {
                 } else {
                     Remove-ItemProperty -Path $path -Name $r.name -ErrorAction SilentlyContinue
                 }
-                Write-Host ("  restored registry : {0}\{1}" -f $r.hive, $r.name)
+                Write-Host ("  [ok]  registry  {0}\{1}" -f $r.hive, $r.name) -ForegroundColor Green
             }
             'service' {
                 & sc.exe config $r.name start= $r.oldStart | Out-Null
                 if ($r.oldStatus -eq 'Running') { Start-Service $r.name -ErrorAction SilentlyContinue }
-                Write-Host ("  restored service  : {0} -> {1}" -f $r.name, $r.oldStart)
+                Write-Host ("  [ok]  service   {0} -> {1}" -f $r.name, $r.oldStart) -ForegroundColor Green
             }
             'task' {
                 Enable-ScheduledTask -TaskPath $r.path -TaskName $r.name -ErrorAction SilentlyContinue | Out-Null
-                Write-Host ("  re-enabled task   : {0}" -f $r.name)
+                Write-Host ("  [ok]  task      {0}" -f $r.name) -ForegroundColor Green
             }
             'appx' {
-                Write-Host ("  appx NOT auto-restored: {0}" -f $r.name) -ForegroundColor Yellow
-                Write-Host ("      reinstall from Microsoft Store if you want it back.") -ForegroundColor DarkGray
+                Write-Host ("  [!!]  app       {0} not restored automatically" -f $r.name) -ForegroundColor Yellow
+                Write-Host ("        reinstall it from the Microsoft Store if you want it back.") -ForegroundColor DarkGray
             }
             'path-clean' {
-                Write-Host ("  cache path (content is not recoverable): {0}" -f $r.path) -ForegroundColor Yellow
+                Write-Host ("  [!!]  cache     {0} (deleted content is not recoverable)" -f $r.path) -ForegroundColor Yellow
             }
             'onedrive' {
-                Write-Host "  OneDrive: run the official installer to get it back: https://aka.ms/onedrive" -ForegroundColor Yellow
+                Write-Host "  [!!]  onedrive  reinstall it from https://aka.ms/onedrive" -ForegroundColor Yellow
             }
             default { }
         }
         $ok++
     } catch {
         $failed++
-        Write-Host ("  FAILED to restore {0}: {1}" -f $r.kind, $_.Exception.Message) -ForegroundColor Red
+        Write-Host ("  [XX]  FAILED    {0}: {1}" -f $r.kind, $_.Exception.Message) -ForegroundColor Red
     }
 }
 Write-Host ''
-Write-Host ("Restore finished. handled={0} failed={1}" -f $ok, $failed) -ForegroundColor Cyan
+Write-Host ("  Restore finished.  handled={0}  failed={1}" -f $ok, $failed) -ForegroundColor Cyan
 if ($failed -gt 0) { exit 2 }
 '@
     $restoreScript | Out-File -FilePath $Journal.Restore -Encoding UTF8
@@ -550,9 +725,9 @@ function Show-RestorePoints {
     Write-Head "Restore points"
     foreach ($p in $points) {
         $hasBackup = Test-Path (Join-Path $p.FullName 'backup.json')
-        Write-Host ("  {0}" -f $p.Name) -ForegroundColor White
-        Write-Info ("    created : {0}" -f $p.LastWriteTime)
-        Write-Info ("    restore : {0}" -f $(if ($hasBackup) { Join-Path $p.FullName 'Restore-WinCleanKit.ps1' } else { 'incomplete' }))
+        Write-Ink ("  " + (Format-Text $p.Name 34)) 'accent' -NoNewline
+        Write-Ink ("  " + $p.LastWriteTime.ToString('yyyy-MM-dd HH:mm')) 'muted'
+        Write-Dim ("    restore : {0}" -f $(if ($hasBackup) { Join-Path $p.FullName 'Restore-WinCleanKit.ps1' } else { 'incomplete' }))
     }
 }
 
@@ -631,23 +806,28 @@ try {
     }
 
     $groups = Group-PlanByCategory -Catalog $catalog -Actions $actions
+    # Progress counter: a 74-action run must never look frozen.
+    Initialize-Progress -Total $actions.Count
     foreach ($cid in $groups.Keys) {
         $cat = $catalog.categories | Where-Object { $_.id -eq $cid }
         Write-Host ''
-        Write-Host ("  " + (L $cat 'name')) -ForegroundColor White
+        Write-Ink ("  " + (L $cat 'name')) 'accent'
         foreach ($a in $groups[$cid]) {
             $label = L $a 'title'
             try {
                 $r = Invoke-Action -Action $a -Journal $journal -WhatIf:$DryRun
                 $msg = "{0} — {1}" -f $label, $r.Detail
+                # One vocabulary, and the text marker carries the meaning so
+                # nothing depends on colour: ok / dry / -- / !! / XX.
+                $prefix = Get-ProgressPrefix
                 switch ($r.Status) {
-                    'ok'        { Write-Good $msg;  $script:CountOk++ }
-                    'would'     { Write-Info ("[would] " + $msg); $script:CountOk++ }
-                    'absent'    { Write-Info ("[skip ] " + $msg); $script:CountSkip++ }
-                    'partial'   { Write-Warn2 $msg; $script:CountSkip++ }
-                    'refused'   { Write-Warn2 $msg; $script:CountSkip++ }
-                    'protected' { Write-Warn2 $msg; $script:CountSkip++ }
-                    default     { Write-Warn2 $msg; $script:CountSkip++ }
+                    'ok'        { Write-Status 'ok'   ($prefix + $msg); $script:CountOk++ }
+                    'would'     { Write-Status 'dry'  ($prefix + $msg); $script:CountOk++ }
+                    'absent'    { Write-Status 'skip' ($prefix + $msg); $script:CountSkip++ }
+                    'partial'   { Write-Status 'warn' ($prefix + $msg); $script:CountSkip++ }
+                    'refused'   { Write-Status 'warn' ($prefix + $msg); $script:CountSkip++ }
+                    'protected' { Write-Status 'warn' ($prefix + $msg); $script:CountSkip++ }
+                    default     { Write-Status 'warn' ($prefix + $msg); $script:CountSkip++ }
                 }
                 Write-Journal -Log $journal.Log -Message "$($r.Status)`t$($a.id)`t$($r.Detail)"
                 if ($r.Status -in @('partial', 'refused', 'protected', 'unknown')) {
@@ -655,7 +835,7 @@ try {
                 }
                 if ($r.Status -eq 'protected') { $script:CountFail++ }
             } catch {
-                Write-Bad ("{0} — {1}" -f $label, $_.Exception.Message)
+                Write-Status 'fail' ((Get-ProgressPrefix) + ("{0} — {1}" -f $label, $_.Exception.Message))
                 Write-Journal -Log $journal.Log -Message "error`t$($a.id)`t$($_.Exception.Message)"
                 $script:CountFail++
                 $script:Failures += "$($a.id): $($_.Exception.Message)"

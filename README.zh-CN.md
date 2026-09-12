@@ -2,28 +2,85 @@
 
 **把决定权交还给用户的 Windows 11 减负工具。** 关掉微软的广告与遥测、清掉你从没要过的预装应用 —— 而每一处改动都由你本人拍板。
 
-```
-  ====================================================================
-    WinCleanKit   Windows 11 广告 / 遥测 / 预装清理
-  ====================================================================
-     当前计划: 共 45 项, 最高风险 [低]   (手动加 0 / 手动减 0)
-
-     1. 选择预设            (conservative / balanced / aggressive)
-     2. 按分类选择          (勾选整个分类)
-     3. 逐项自定义          (每个动作单独开关)
-     4. 预览当前计划        (不修改任何东西)
-     5. 执行                (会再次确认，先备份)
-     6. 还原                (从桌面还原点恢复)
-     7. 切换语言            (当前 zh)
-     8. 关于
-     0. 退出
-```
+[![License: MIT](https://img.shields.io/badge/License-MIT-3DA639.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4.svg)](#环境要求)
+[![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE.svg)](#环境要求)
+[![Actions](https://img.shields.io/badge/catalog-74%20actions-4B5563.svg)](docs/CATALOG.md)
+[![Gates](https://img.shields.io/badge/gates-6%20passing-22C55E.svg)](#仓库结构)
 
 [English](README.md) · **中文说明**  
-**文档:** [用法](docs/USAGE.zh-CN.md) ([EN](docs/USAGE.md)) · [安全](docs/SAFETY.zh-CN.md) ([EN](docs/SAFETY.md)) · [限制](docs/LIMITATIONS.zh-CN.md) ([EN](docs/LIMITATIONS.md)) · [行动目录](docs/CATALOG.md) ([EN](docs/CATALOG.md)) · [代码规范](docs/LINTING.md)  
+**文档:** [用法](docs/USAGE.zh-CN.md) ([EN](docs/USAGE.md)) · [安全](docs/SAFETY.zh-CN.md) ([EN](docs/SAFETY.md)) · [限制](docs/LIMITATIONS.zh-CN.md) ([EN](docs/LIMITATIONS.md)) · [行动目录](docs/CATALOG.md) · [代码规范](docs/LINTING.md)  
 **项目:** [参与贡献](CONTRIBUTING.zh-CN.md) ([EN](CONTRIBUTING.md)) · [安全政策](SECURITY.zh-CN.md) ([EN](SECURITY.md)) · [行为准则](CODE_OF_CONDUCT.zh-CN.md) ([EN](CODE_OF_CONDUCT.md)) · [更新日志](CHANGELOG.md) · [许可证](LICENSE)
 
 ---
+
+## 界面长什么样
+
+```
+   ------------------------------------------------------------------
+   WinCleanKit   Windows 11 广告 / 遥测 / 预装清理
+   ------------------------------------------------------------------
+   预设: balanced      语言: zh
+   风险等级:  低 = 可逆、无副作用     中 = 有可见取舍     高 = 会删除程序或数据
+
+   当前计划: 共 60 项, 最高风险 [中]   (手动加 0 / 手动减 0)
+
+   ------------------------------------------------------------------
+   主菜单
+   ------------------------------------------------------------------
+   1. 选择预设            (conservative / balanced / aggressive)
+   2. 按分类选择          (勾选整个分类)
+   3. 逐项自定义          (每个动作单独开关)
+   4. 预览当前计划        (不修改任何东西)
+   5. 执行                (会再次确认，先备份)
+   6. 还原                (从桌面还原点恢复)
+   7. 切换语言            (当前 zh)
+   8. 关于
+   0. 退出
+```
+
+预览计划 —— 一张对齐的表格，每条动作的风险等级清晰可见：
+
+```
+   ------------------------------------------------------------------
+   WinCleanKit 0.1.0
+   ------------------------------------------------------------------
+   Preset   : aggressive
+   Selected : 74 action(s)
+   Mode     : PREVIEW ONLY
+
+   系统广告与推荐            22 action(s)
+     [low ] 禁止静默自动安装应用
+     [low ] 关闭订阅内容(推荐/广告)
+     [MED ] 隐藏设置首页推广区块
+
+   预装应用                  11 action(s)
+     [low ] 卸载 Windows 地图
+     [MED ] 卸载媒体播放器(ZuneMusic)
+
+   OneDrive                  1 action(s)
+     [HIGH] 移除 OneDrive 客户端并阻止重装
+
+   Total actions : 74
+   Highest risk  : high
+```
+
+执行时 —— 带进度计数，且只有**一套**状态词表；含义由文字标记承载，**不依赖颜色**：
+
+```
+   ------------------------------------------------------------------
+   Applying changes
+   ------------------------------------------------------------------
+   Backup / restore : C:\Users\you\Desktop\WinCleanKit-20260913-004942
+
+   系统广告与推荐
+     [ok]  [  1/74]   1%  禁止静默自动安装应用 — HKCU\SilentInstalledAppsEnabled = 0
+     [--]  [  5/74]   6%  卸载 Windows 地图 — not installed
+     [!!]  [ 12/74]  16%  隐藏设置首页推广区块 — key accepted the write but dropped it
+     [XX]  [ 40/74]  54%  某动作 — access denied
+```
+
+图例：`[ok]` 已生效 · `[dry]` 将生效 · `[--]` 不适用 · `[!!]` 已跳过或受保护 · `[XX]` 失败。
 
 ## 为什么还要再做一个？
 
@@ -43,12 +100,17 @@ WinCleanKit 反过来设计：
 
 ## 快速开始
 
-1. 下载或克隆本仓库。
-2. 双击 **`src\WinCleanKit.bat`**。
-3. 同意 UAC 提权（改机器级设置需要管理员权限）。
-4. 选预设 → 看计划 → 执行。
+```text
+1.  下载或克隆本仓库
+2.  双击  run.bat
+3.  同意 UAC 提权                （改机器级设置需要管理员权限）
+4.  选预设 → 看计划 → 输入 APPLY
+```
 
-就这么多。在你于最终确认处输入 `APPLY` 之前，**什么都不会发生**。
+在你于最终确认处输入 `APPLY` 之前**什么都不会发生**；而一轮运行做的第一件事，
+就是在桌面写下回滚点。
+
+<a id="环境要求"></a>
 
 > **环境要求**：Windows 10 1809+ / Windows 11 · Windows PowerShell 5.1 或 PowerShell 7+ · 修改 `HKLM` 需要管理员权限。
 > 即使跑完本工具，Windows 11 专业版/家庭版仍会发送**必需**级诊断数据 —— 这是平台限制，不是设置能绕过的，见[已知限制](docs/LIMITATIONS.md)。
@@ -149,15 +211,16 @@ powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\Desktop\WinCleanKit-<
 
 ```
 WinCleanKit/
+├── run.bat                      双击入口（大多数人只需要这个）
 ├── src/
 │   ├── WinCleanKit.bat          交互前端：提权、菜单、确认
-│   ├── WinCleanKit.ps1          引擎：解析 → 预览 → 执行 → 记录
+│   ├── WinCleanKit.ps1          引擎 + 终端设计系统
 │   └── menu/menu.ps1            菜单数据提供者（让 bat 不必解析 JSON）
 ├── catalog/catalog.json         全部 74 条操作，以数据形式存在
-├── docs/                        目录参考、用法、安全、限制、代码规范
-├── tests/                       语法、规范、文档、catalog 与引擎门禁
+├── docs/                        目录、用法、安全、限制、代码规范
+├── tests/                       六道门禁：语法、规范、文档、catalog、引擎
 ├── tools/                       New-CatalogDoc.ps1（生成双语行动目录）
-├── .github/workflows/           CI
+├── .github/workflows/           CI（在 .gitea/workflows 有镜像）
 └── localization/                UI 文案
 ```
 
@@ -169,6 +232,22 @@ WinCleanKit/
 - **写入后必定读回校验。** 少数 Windows 键会「接受写入然后静默丢弃」，这类情况会被报为 `[FAIL]`，而不是假成功。
 
 ---
+
+#### 终端设计系统
+
+控制台界面不是随手写的 `Write-Host`。`src/WinCleanKit.ps1` 统一持有一套配色与一套状态词表，
+`src/WinCleanKit.bat` 复用同一组颜色角色，因此前端与引擎看起来是同一个产品。
+
+- **语义色角色，而非硬编码颜色。** `brand`、`accent`、`success`、`caution`、`danger`、`muted`。
+  换配色只需改 `$script:Ink` 里的一行。
+- **宽度感知对齐。** 中文字形占两个终端列却只算一个字符，PowerShell 自带的 `{0,-20}`
+  会让中英混排的表格参差不齐。`Format-Text` 按显示宽度补齐 —— 这就是为什么分类计数
+  在中文和英文下能对齐到同一列。
+- **颜色从来不是唯一信号。** 每种状态都有文字标记（`[ok]`、`[dry]`、`[--]`、`[!!]`、`[XX]`），
+  并且当输出被重定向、进入管道或设置了 `NO_COLOR` 时，颜色会降级为纯文本 ——
+  日志与 CI 采集因此始终干净。
+- **长任务有进度。** 74 条动作会打印 `[ 12/74]  16%`，绝不会看起来卡死。
+- **不闪屏。** 前端改用光标归位、在原帧上重绘，而不是每屏都 `CLS`；同时保留最近 25 行作为回看。
 
 ## 参与贡献
 

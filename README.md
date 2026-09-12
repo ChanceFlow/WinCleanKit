@@ -2,28 +2,86 @@
 
 **A user-first Windows 11 de-bloater.** Close Microsoft's ads and telemetry, remove the apps you never asked for — and stay in control of every single change.
 
-```
-  ====================================================================
-    WinCleanKit   Windows 11 广告 / 遥测 / 预装清理
-  ====================================================================
-     Current plan: 45 actions, highest risk [low]   (+0 manual / -0 manual)
-
-     1. Choose a preset       (conservative / balanced / aggressive)
-     2. Pick by category      (toggle a whole category)
-     3. Customise every item  (flip individual actions on and off)
-     4. Preview the plan      (changes nothing)
-     5. Apply                 (confirms again, backs up first)
-     6. Restore               (undo from a desktop restore point)
-     7. Switch language       (en / zh)
-     8. About
-     0. Quit
-```
+[![License: MIT](https://img.shields.io/badge/License-MIT-3DA639.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4.svg)](#requirements)
+[![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE.svg)](#requirements)
+[![Actions](https://img.shields.io/badge/catalog-74%20actions-4B5563.svg)](docs/CATALOG.md)
+[![Gates](https://img.shields.io/badge/gates-6%20passing-22C55E.svg)](#repository-layout)
 
 **English** · [中文说明](README.zh-CN.md)  
 **Docs / 文档:** [Usage](docs/USAGE.md) ([中文](docs/USAGE.zh-CN.md)) · [Safety](docs/SAFETY.md) ([中文](docs/SAFETY.zh-CN.md)) · [Limitations](docs/LIMITATIONS.md) ([中文](docs/LIMITATIONS.zh-CN.md)) · [Catalog](docs/CATALOG.md) ([中文](docs/CATALOG.zh-CN.md)) · [Linting](docs/LINTING.md)  
 **Project / 项目:** [Contributing](CONTRIBUTING.md) ([中文](CONTRIBUTING.zh-CN.md)) · [Security](SECURITY.md) ([中文](SECURITY.zh-CN.md)) · [Code of Conduct](CODE_OF_CONDUCT.md) ([中文](CODE_OF_CONDUCT.zh-CN.md)) · [Changelog](CHANGELOG.md) · [License](LICENSE)
 
 ---
+
+## What it looks like
+
+```
+   ------------------------------------------------------------------
+   WinCleanKit   Windows 11 广告 / 遥测 / 预装清理
+   ------------------------------------------------------------------
+   预设: balanced      语言: zh
+   风险等级:  低 = 可逆、无副作用     中 = 有可见取舍     高 = 会删除程序或数据
+
+   当前计划: 共 60 项, 最高风险 [中]   (手动加 0 / 手动减 0)
+
+   ------------------------------------------------------------------
+   主菜单
+   ------------------------------------------------------------------
+   1. 选择预设            (conservative / balanced / aggressive)
+   2. 按分类选择          (勾选整个分类)
+   3. 逐项自定义          (每个动作单独开关)
+   4. 预览当前计划        (不修改任何东西)
+   5. 执行                (会再次确认，先备份)
+   6. 还原                (从桌面还原点恢复)
+   7. 切换语言            (当前 zh)
+   8. 关于
+   0. 退出
+```
+
+Previewing a plan — one aligned table, risk visible per action:
+
+```
+   ------------------------------------------------------------------
+   WinCleanKit 0.1.0
+   ------------------------------------------------------------------
+   Preset   : aggressive
+   Selected : 74 action(s)
+   Mode     : PREVIEW ONLY
+
+   系统广告与推荐            22 action(s)
+     [low ] 禁止静默自动安装应用
+     [low ] 关闭订阅内容(推荐/广告)
+     [MED ] 隐藏设置首页推广区块
+
+   预装应用                  11 action(s)
+     [low ] 卸载 Windows 地图
+     [MED ] 卸载媒体播放器(ZuneMusic)
+
+   OneDrive                  1 action(s)
+     [HIGH] 移除 OneDrive 客户端并阻止重装
+
+   Total actions : 74
+   Highest risk  : high
+```
+
+Applying it — a progress counter, and one status vocabulary where the text marker
+carries the meaning, so nothing depends on colour:
+
+```
+   ------------------------------------------------------------------
+   Applying changes
+   ------------------------------------------------------------------
+   Backup / restore : C:\Users\you\Desktop\WinCleanKit-20260913-004942
+
+   系统广告与推荐
+     [ok]  [  1/74]   1%  禁止静默自动安装应用 — HKCU\SilentInstalledAppsEnabled = 0
+     [--]  [  5/74]   6%  卸载 Windows 地图 — not installed
+     [!!]  [ 12/74]  16%  隐藏设置首页推广区块 — key accepted the write but dropped it
+     [XX]  [ 40/74]  54%  某动作 — access denied
+```
+
+Legend: `[ok]` applied · `[dry]` would apply · `[--]` not applicable · `[!!]` skipped or protected · `[XX]` failed.
 
 ## Why another de-bloater?
 
@@ -43,15 +101,22 @@ WinCleanKit is built the other way round:
 
 ## Quick start
 
-1. Download or clone this repository.
-2. Double-click **`src\WinCleanKit.bat`**.
-3. Accept the elevation prompt (machine-level changes need administrator rights).
-4. Pick a preset, look at the plan, then apply.
+```text
+1.  Download or clone this repository
+2.  Double-click  run.bat
+3.  Accept the elevation prompt        (machine-level changes need admin)
+4.  Pick a preset, read the plan, then type APPLY
+```
 
-That is the whole workflow. Nothing happens until you type `APPLY` at the final confirmation.
+Nothing is written until you type `APPLY` at the final confirmation, and the first
+thing a run does is write a rollback point to your Desktop.
 
+<a id="requirements"></a>
 > **Requirements:** Windows 10 1809+ or Windows 11 · Windows PowerShell 5.1 or PowerShell 7+ · administrator rights for `HKLM` changes.
 > Windows 11 Pro/Home will still send *Required* diagnostic data even after this tool runs — that is a platform limit, not a setting. See [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
+
+Prefer the command line? `src\WinCleanKit.ps1` is the whole engine and takes the same
+decisions as flags — see [Command line](#command-line).
 
 ### The three presets
 
@@ -149,15 +214,16 @@ Registry values are restored exactly, services go back to their original start t
 
 ```
 WinCleanKit/
+├── run.bat                      double-click launcher (what most users need)
 ├── src/
 │   ├── WinCleanKit.bat          interactive front-end: elevation, menus, confirmation
-│   ├── WinCleanKit.ps1          the engine: resolve -> preview -> apply -> record
+│   ├── WinCleanKit.ps1          the engine + the terminal design system
 │   └── menu/menu.ps1            menu data provider (keeps batch free of JSON parsing)
 ├── catalog/catalog.json         all 74 actions as data
-├── docs/                        catalog reference, usage, safety, limitations, linting
-├── tests/                       parse, lint, docs, catalog and engine gates
+├── docs/                        catalog, usage, safety, limitations, linting
+├── tests/                       six gates: parse, lint, docs, catalog, engine
 ├── tools/                       New-CatalogDoc.ps1 (generates the bilingual catalog)
-├── .github/workflows/           CI
+├── .github/workflows/           CI (mirrored in .gitea/workflows)
 └── localization/                UI strings
 ```
 
@@ -169,6 +235,27 @@ WinCleanKit/
 - **Writes are verified by reading back.** A few Windows keys accept a write and silently drop it; those are reported as `[FAIL]` instead of a false success.
 
 ---
+
+#### The terminal design system
+
+The console UI is not ad-hoc `Write-Host` calls. `src/WinCleanKit.ps1` owns one
+palette and one status vocabulary, and `src/WinCleanKit.bat` mirrors the same
+colour roles, so the front-end and the engine read as one product.
+
+- **Semantic colour roles, not raw colours.** `brand`, `accent`, `success`,
+  `caution`, `danger`, `muted`. Changing the palette is one line in `$script:Ink`.
+- **Width-aware alignment.** Chinese glyphs occupy two terminal columns but count
+  as one character, so PowerShell's own `{0,-20}` leaves CJK tables ragged.
+  `Format-Text` measures display width, which is why the category counts line up
+  identically in English and Chinese.
+- **Colour is never the only signal.** Every state has a text marker (`[ok]`,
+  `[dry]`, `[--]`, `[!!]`, `[XX]`), and colour degrades to plain text when output
+  is redirected, piped, or `NO_COLOR` is set — so logs and CI capture stay clean.
+- **Progress for long runs.** A 74-action run prints `[ 12/74]  16%`, so it never
+  looks frozen.
+- **No flashing.** The front-end repositions the cursor and redraws over the
+  previous frame instead of calling `CLS` on every screen, which also keeps the
+  last 25 lines as scrollback.
 
 ## Contributing
 

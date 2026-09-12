@@ -135,21 +135,39 @@ if exist "%WCK_MINUS%" del "%WCK_MINUS%" >nul 2>&1
 exit /b 0
 
 :uiclear
-cls
+rem Return the cursor to the top of the window and redraw over the previous frame.
+rem A blanket CLS on every screen makes the window flash and discards the lines the
+rem user was reading. Blanking only the region we rewrite avoids both, and leaves
+rem the last 25 lines as scrollback.
+<nul set /p "=[H[2J[25;1H"
+exit /b 0
+
+:setcolours
+rem Semantic colour roles, mirroring $script:Ink in src\WinCleanKit.ps1 so the
+rem front-end and the engine look like one product. ANSI is used because cmd's
+rem own `color` command only sets the whole screen.
+rem   C_RESET  C_BRAND  C_ACCENT  C_OK  C_MUTED  C_WARN
+set "C_RESET=[0m"
+set "C_BRAND=[36m"
+set "C_ACCENT=[96m"
+set "C_OK=[92m"
+set "C_MUTED=[90m"
+set "C_WARN=[93m"
 exit /b 0
 
 :legend
-echo   风险等级:  低 = 可逆、无副作用     中 = 有可见取舍     高 = 会删除程序或数据
+echo   %C_MUTED%风险等级:  低 = 可逆、无副作用     中 = 有可见取舍     高 = 会删除程序或数据%C_RESET%
 exit /b 0
 
 :header
 call :toolang
 call :uiclear
+call :setcolours
 echo.
-echo   ====================================================================
-echo     WinCleanKit   Windows 11 广告 / 遥测 / 预装清理
-echo   ====================================================================
-echo     预设: %WCK_MODE%      语言: %WCK_UILANG%
+echo   %C_BRAND%--------------------------------------------------------------------%C_RESET%
+echo   %C_ACCENT%WinCleanKit%C_RESET%   Windows 11 广告 / 遥测 / 预装清理
+echo   %C_BRAND%--------------------------------------------------------------------%C_RESET%
+echo   %C_MUTED%预设: %C_RESET%%WCK_MODE%      %C_MUTED%语言: %C_RESET%%WCK_UILANG%
 call :legend
 exit /b 0
 
@@ -162,9 +180,10 @@ echo.
 echo   --------------------------------------------------------------------
 echo     选择预设
 echo   --------------------------------------------------------------------
-if /i "%WCK_MODE%"=="conservative" (echo     [x] 1. conservative  仅关闭广告与推荐，最保守) else (echo     [ ] 1. conservative  仅关闭广告与推荐，最保守)
-if /i "%WCK_MODE%"=="balanced"     (echo     [x] 2. balanced      广告 + 遥测 + 明确不需要的预装应用) else (echo     [ ] 2. balanced      广告 + 遥测 + 明确不需要的预装应用)
-if /i "%WCK_MODE%"=="aggressive"   (echo     [x] 3. aggressive    上面全部 + 有取舍的项目（游戏栏、OneDrive、定位等）) else (echo     [ ] 3. aggressive    上面全部 + 有取舍的项目（游戏栏、OneDrive、定位等）)
+rem Markers carry meaning on their own; colour only reinforces them.
+if /i "%WCK_MODE%"=="conservative" (echo     %C_OK%[x]%C_RESET% 1. conservative  %C_MUTED%仅关闭广告与推荐，最保守%C_RESET%) else (echo     %C_MUTED%[ ]%C_RESET% 1. conservative  仅关闭广告与推荐，最保守)
+if /i "%WCK_MODE%"=="balanced"     (echo     %C_OK%[x]%C_RESET% 2. balanced      %C_MUTED%广告 + 遥测 + 明确不需要的预装应用%C_RESET%) else (echo     %C_MUTED%[ ]%C_RESET% 2. balanced      广告 + 遥测 + 明确不需要的预装应用)
+if /i "%WCK_MODE%"=="aggressive"   (echo     %C_WARN%[x]%C_RESET% 3. aggressive    %C_MUTED%上面全部 + 有取舍的项目（游戏栏、OneDrive、定位等）%C_RESET%) else (echo     %C_MUTED%[ ]%C_RESET% 3. aggressive    上面全部 + 有取舍的项目（游戏栏、OneDrive、定位等）)
 echo.
 call :summarybar
 echo.
