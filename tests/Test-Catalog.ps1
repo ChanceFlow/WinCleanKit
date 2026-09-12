@@ -17,9 +17,10 @@ $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
 $pass = 0; $fail = 0
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
-    Justification = 'Coloured pass/fail output is the intended interface of this test script.')]
-function Check([string]$Name, [bool]$Ok, [string]$Detail = '') {
+function Check {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Coloured pass/fail output is the intended interface of this test script.')]
+    param([string]$Name, [bool]$Ok, [string]$Detail = '')
     if ($Ok) { $script:pass++; Write-Host ("  [PASS] {0}{1}" -f $Name, $(if ($Detail) { " | $Detail" } else { '' })) -ForegroundColor Green }
     else     { $script:fail++; Write-Host ("  [FAIL] {0}{1}" -f $Name, $(if ($Detail) { " | $Detail" } else { '' })) -ForegroundColor Red }
 }

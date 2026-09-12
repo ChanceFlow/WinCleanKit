@@ -104,36 +104,39 @@ function L {
     $Object.$Base
 }
 
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
-    Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPositionalParameters', '',
-    Justification = 'Single mandatory string parameter; unambiguous at the call site.')]
-function Write-Head([string]$Text) {
+function Write-Head {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
+    param([string]$Text)
     Write-Host ''
     Write-Host ('=' * 68) -ForegroundColor DarkCyan
     Write-Host "  $Text" -ForegroundColor Cyan
     Write-Host ('=' * 68) -ForegroundColor DarkCyan
 }
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
-    Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPositionalParameters', '',
-    Justification = 'Single mandatory string parameter; unambiguous at the call site.')]
-function Write-Info([string]$Text) { Write-Host "  $Text" }
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
-    Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPositionalParameters', '',
-    Justification = 'Single mandatory string parameter; unambiguous at the call site.')]
-function Write-Good([string]$Text) { Write-Host "  [ OK ] $Text" -ForegroundColor Green }
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
-    Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPositionalParameters', '',
-    Justification = 'Single mandatory string parameter; unambiguous at the call site.')]
-function Write-Warn2([string]$Text) { Write-Host "  [WARN] $Text" -ForegroundColor Yellow }
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
-    Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingPositionalParameters', '',
-    Justification = 'Single mandatory string parameter; unambiguous at the call site.')]
-function Write-Bad([string]$Text)  { Write-Host "  [FAIL] $Text" -ForegroundColor Red }
+function Write-Info {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
+    param([string]$Text)
+    Write-Host "  $Text"
+}
+function Write-Good {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
+    param([string]$Text)
+    Write-Host "  [ OK ] $Text" -ForegroundColor Green
+}
+function Write-Warn2 {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
+    param([string]$Text)
+    Write-Host "  [WARN] $Text" -ForegroundColor Yellow
+}
+function Write-Bad {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
+        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
+    param([string]$Text)
+    Write-Host "  [FAIL] $Text" -ForegroundColor Red
+}
 
 function Get-Catalog {
     if (-not (Test-Path $script:CatalogPath)) {
@@ -270,9 +273,9 @@ function Write-Journal {
     Add-Content -Path $Log -Value $line -Encoding UTF8
 }
 
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '',
-    Justification = 'Private helper called once from the engine with the run already confirmed; not a public cmdlet.')]
 function Save-Journal {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '',
+        Justification = 'Private helper invoked once per run after the user confirmed; not a public cmdlet.')]
     param($Journal)
     # This is the only place the run directory is created, so a dry run (which
     # never calls Save-Journal) leaves nothing behind on the Desktop.
@@ -362,15 +365,14 @@ function Get-RegOriginal {
     [pscustomobject]@{ Path = $path; Existed = $existed; Old = $old; Type = $type }
 }
 
-[CmdletBinding(SupportsShouldProcess)]
 function Invoke-RegistryAction {
-    param($Action, $Journal, [switch]$WhatIf)
+    param($Action, $Journal, [switch]$DryRun)
     $orig = Get-RegOriginal -Hive $Action.hive -Key $Action.key -Name $Action.name
     Add-Record $Journal 'registry' @{
         hive = $Action.hive; key = $Action.key; name = $Action.name
         existed = $orig.Existed; old = $orig.Old; type = $Action.type
     }
-    if (-not $PSCmdlet.ShouldProcess($null, $null, $null)) { return @{ Status = 'would'; Detail = "$($Action.hive)\$($Action.name) = $($Action.value)" } }
+    if ($DryRun) { return @{ Status = 'would'; Detail = "$($Action.hive)\$($Action.name) = $($Action.value)" } }
 
     if (-not (Test-Path $orig.Path)) { New-Item -Path $orig.Path -Force | Out-Null }
     New-ItemProperty -Path $orig.Path -Name $Action.name -Value $Action.value `
@@ -384,9 +386,8 @@ function Invoke-RegistryAction {
     return @{ Status = 'protected'; Detail = "key accepted the write but dropped it" }
 }
 
-[CmdletBinding(SupportsShouldProcess)]
 function Invoke-ServiceAction {
-    param($Action, $Journal, [switch]$WhatIf)
+    param($Action, $Journal, [switch]$DryRun)
     $svc = Get-Service -Name $Action.name -ErrorAction SilentlyContinue
     if (-not $svc) { return @{ Status = 'absent'; Detail = 'service not installed' } }
 
@@ -394,7 +395,7 @@ function Invoke-ServiceAction {
     $oldStatus = $svc.Status.ToString()
     Add-Record $Journal 'service' @{ name = $Action.name; oldStart = $oldStart.ToLower(); oldStatus = $oldStatus }
 
-    if (-not $PSCmdlet.ShouldProcess($null, $null, $null)) { return @{ Status = 'would'; Detail = "$oldStart -> $($Action.startType)" } }
+    if ($DryRun) { return @{ Status = 'would'; Detail = "$oldStart -> $($Action.startType)" } }
 
     if ($svc.Status -eq 'Running' -and $Action.startType -eq 'Disabled') {
         Stop-Service -Name $Action.name -Force -ErrorAction SilentlyContinue
@@ -409,14 +410,13 @@ function Invoke-ServiceAction {
     return @{ Status = 'protected'; Detail = "still $($after.StartType)" }
 }
 
-[CmdletBinding(SupportsShouldProcess)]
 function Invoke-TaskAction {
-    param($Action, $Journal, [switch]$WhatIf)
+    param($Action, $Journal, [switch]$DryRun)
     $t = Get-ScheduledTask -TaskPath $Action.path -TaskName $Action.name -ErrorAction SilentlyContinue
     if (-not $t) { return @{ Status = 'absent'; Detail = 'task not found' } }
 
     Add-Record $Journal 'task' @{ path = $Action.path; name = $Action.name; oldState = $t.State.ToString() }
-    if (-not $PSCmdlet.ShouldProcess($null, $null, $null)) { return @{ Status = 'would'; Detail = "disable $($Action.name)" } }
+    if ($DryRun) { return @{ Status = 'would'; Detail = "disable $($Action.name)" } }
 
     try {
         Disable-ScheduledTask -TaskPath $Action.path -TaskName $Action.name -ErrorAction Stop | Out-Null
@@ -428,9 +428,8 @@ function Invoke-TaskAction {
     return @{ Status = 'protected'; Detail = "still $($after.State)" }
 }
 
-[CmdletBinding(SupportsShouldProcess)]
 function Invoke-AppxAction {
-    param($Action, $Journal, [switch]$WhatIf)
+    param($Action, $Journal, [switch]$DryRun)
     $pkgs = @(Get-AppxPackage -Name $Action.name -AllUsers -ErrorAction SilentlyContinue)
     $prov = @(Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue |
               Where-Object { $_.DisplayName -eq $Action.name })
@@ -438,7 +437,7 @@ function Invoke-AppxAction {
     if ($pkgs.Count -eq 0 -and $prov.Count -eq 0) {
         return @{ Status = 'absent'; Detail = 'not installed' }
     }
-    if (-not $PSCmdlet.ShouldProcess($null, $null, $null)) {
+    if ($DryRun) {
         return @{ Status = 'would'; Detail = "uninstall $($pkgs.Count) pkg(s), revoke $($prov.Count) provision(s)" }
     }
 
@@ -457,9 +456,8 @@ function Invoke-AppxAction {
     return @{ Status = 'ok'; Detail = $detail }
 }
 
-[CmdletBinding(SupportsShouldProcess)]
 function Invoke-PathCleanAction {
-    param($Action, $Journal, [switch]$WhatIf)
+    param($Action, $Journal, [switch]$DryRun)
     $freed = 0; $count = 0; $touched = 0
     foreach ($raw in $Action.paths) {
         $p = [Environment]::ExpandEnvironmentVariables($raw)
@@ -468,19 +466,18 @@ function Invoke-PathCleanAction {
         if ($files.Count -eq 0) { continue }
         $size = ($files | Measure-Object -Property Length -Sum).Sum
         Add-Record $Journal 'path-clean' @{ path = $p; files = $files.Count; bytes = $size }
-        if (-not $PSCmdlet.ShouldProcess($null, $null, $null)) { $freed += $size; $count += $files.Count; $touched++; continue }
+        if ($DryRun) { $freed += $size; $count += $files.Count; $touched++; continue }
         $files | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue
         $freed += $size; $count += $files.Count; $touched++
     }
     $mb = [math]::Round($freed / 1MB, 1)
     if ($touched -eq 0) { return @{ Status = 'absent'; Detail = 'nothing cached' } }
-    $verb = if (-not $PSCmdlet.ShouldProcess($null, $null, $null)) { 'would free' } else { 'freed' }
+    $verb = if ($DryRun) { 'would free' } else { 'freed' }
     return @{ Status = 'ok'; Detail = "$verb $mb MB ($count files)" }
 }
 
-[CmdletBinding(SupportsShouldProcess)]
 function Invoke-OneDriveAction {
-    param($Journal, [switch]$WhatIf)
+    param($Journal, [switch]$DryRun)
 
     # Safety rail: refuse if the user's Desktop/Documents are redirected into OneDrive.
     $shellFolders = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders'
@@ -494,7 +491,7 @@ function Invoke-OneDriveAction {
     $binDirs = @("$env:LOCALAPPDATA\Microsoft\OneDrive", "$env:ProgramFiles\Microsoft OneDrive")
     $dataDir = Join-Path $env:USERPROFILE 'OneDrive'
 
-    if (-not $PSCmdlet.ShouldProcess($null, $null, $null)) {
+    if ($DryRun) {
         return @{ Status = 'would'; Detail = "remove binaries; keep data folder $dataDir" }
     }
 
@@ -518,16 +515,15 @@ function Invoke-OneDriveAction {
     return @{ Status = 'ok'; Detail = "removed ${mb}MB, $kept" }
 }
 
-[CmdletBinding(SupportsShouldProcess)]
 function Invoke-Action {
-    param($Action, $Journal, [switch]$WhatIf)
+    param($Action, $Journal, [switch]$DryRun)
     switch ($Action.target) {
-        'registry'   { Invoke-RegistryAction    -Action $Action -Journal $Journal -WhatIf:$WhatIf }
-        'service'    { Invoke-ServiceAction     -Action $Action -Journal $Journal -WhatIf:$WhatIf }
-        'task'       { Invoke-TaskAction        -Action $Action -Journal $Journal -WhatIf:$WhatIf }
-        'appx'       { Invoke-AppxAction        -Action $Action -Journal $Journal -WhatIf:$WhatIf }
-        'path-clean' { Invoke-PathCleanAction   -Action $Action -Journal $Journal -WhatIf:$WhatIf }
-        'onedrive'   { Invoke-OneDriveAction    -Journal $Journal -WhatIf:$WhatIf }
+        'registry'   { Invoke-RegistryAction    -Action $Action -Journal $Journal -DryRun:$DryRun }
+        'service'    { Invoke-ServiceAction     -Action $Action -Journal $Journal -DryRun:$DryRun }
+        'task'       { Invoke-TaskAction        -Action $Action -Journal $Journal -DryRun:$DryRun }
+        'appx'       { Invoke-AppxAction        -Action $Action -Journal $Journal -DryRun:$DryRun }
+        'path-clean' { Invoke-PathCleanAction   -Action $Action -Journal $Journal -DryRun:$DryRun }
+        'onedrive'   { Invoke-OneDriveAction    -Journal $Journal -DryRun:$DryRun }
         default      { @{ Status = 'unknown'; Detail = "unsupported target '$($Action.target)'" } }
     }
 }
@@ -535,18 +531,20 @@ function Invoke-Action {
 # --------------------------------------------------------------------------
 # Restore points
 # --------------------------------------------------------------------------
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '',
-    Justification = 'The function returns a collection of restore points; it is a private helper, not a cmdlet.')]
 function Get-RestorePoints {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '',
+        Justification = 'Returns a collection of restore points; a private helper, not a cmdlet.')]
+    param()
     $desktop = [Environment]::GetFolderPath('Desktop')
     if (-not $desktop) { $desktop = $env:USERPROFILE }
     , @(Get-ChildItem -Path $desktop -Directory -Filter 'WinCleanKit-*' -ErrorAction SilentlyContinue |
         Sort-Object LastWriteTime -Descending)
 }
 
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '',
-    Justification = 'The function lists a collection of restore points; it is a private helper, not a cmdlet.')]
 function Show-RestorePoints {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '',
+        Justification = 'Lists a collection of restore points; a private helper, not a cmdlet.')]
+    param()
     $points = Get-RestorePoints
     if ($points.Count -eq 0) { Write-Info "No restore points found on the Desktop."; return }
     Write-Head "Restore points"

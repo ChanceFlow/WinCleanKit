@@ -152,8 +152,8 @@ WinCleanKit/
 │   ├── WinCleanKit.ps1          the engine: resolve -> preview -> apply -> record
 │   └── menu/menu.ps1            menu data provider (keeps batch free of JSON parsing)
 ├── catalog/catalog.json         all 74 actions as data
-├── docs/                        catalog reference, usage, safety, limitations
-├── tests/                       catalog and engine validation
+├── docs/                        catalog reference, usage, safety, limitations, linting
+├── tests/                       parse, lint, catalog and engine gates
 ├── .github/workflows/           CI
 └── localization/                UI strings
 ```
@@ -172,9 +172,20 @@ WinCleanKit/
 Adding an action is usually a small JSON change. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first — it explains the risk levels, the preset rules, and what a good `why` string looks like.
 
 ```powershell
-# Validate the catalog and the engine before opening a pull request
+# Syntax gate: the PowerShell parser plus the file-encoding rules
+.\tests\Test-Parse.ps1
+
+# Lint gate: PSScriptAnalyzer (needs Install-Module PSScriptAnalyzer -Scope CurrentUser)
+.\tests\Test-Analyzer.ps1
+
+# Data integrity, safety invariants, behaviour
 .\tests\Test-Catalog.ps1
+.\tests\Test-Engine.ps1
 ```
+
+All four gates also run in CI. Current state: parser clean, PSScriptAnalyzer
+`0 errors / 0 warnings`, catalog 31 checks, engine 23 checks. See
+[LINTING.md](docs/LINTING.md).
 
 ---
 

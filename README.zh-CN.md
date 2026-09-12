@@ -152,8 +152,8 @@ WinCleanKit/
 │   ├── WinCleanKit.ps1          引擎：解析 → 预览 → 执行 → 记录
 │   └── menu/menu.ps1            菜单数据提供者（让 bat 不必解析 JSON）
 ├── catalog/catalog.json         全部 74 条操作，以数据形式存在
-├── docs/                        目录参考、用法、安全、限制
-├── tests/                       catalog 与引擎校验
+├── docs/                        目录参考、用法、安全、限制、代码规范
+├── tests/                       语法、规范、catalog 与引擎四道门禁
 ├── .github/workflows/           CI
 └── localization/                UI 文案
 ```
@@ -172,9 +172,20 @@ WinCleanKit/
 新增一条操作通常只是改一小段 JSON。请先读 [CONTRIBUTING.md](CONTRIBUTING.md) —— 里面说明了风险等级、预设规则，以及一句好的 `why` 该长什么样。
 
 ```powershell
-# 提交 PR 前先校验 catalog 与引擎
+# 语法门禁：PowerShell 解析器 + 文件编码规则
+.\tests\Test-Parse.ps1
+
+# 代码规范门禁：PSScriptAnalyzer（需先 Install-Module PSScriptAnalyzer -Scope CurrentUser）
+.\tests\Test-Analyzer.ps1
+
+# 数据完整性与行为验证
 .\tests\Test-Catalog.ps1
+.\tests\Test-Engine.ps1
 ```
+
+四道门禁在 CI 中都会跑。当前状态：解析器全过、PSScriptAnalyzer
+`0 Error / 0 Warning`、Catalog 31 项、Engine 23 项。详见
+[LINTING.md](docs/LINTING.md)。
 
 ---
 

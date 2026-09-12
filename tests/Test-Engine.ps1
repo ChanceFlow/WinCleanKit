@@ -46,50 +46,50 @@ function Invoke-Host {
         Text  = ((Get-Content $so -Raw -ErrorAction SilentlyContinue) + "`n" + (Get-Content $se -Raw -ErrorAction SilentlyContinue))
     }
 }
-function Engine-Plan([string[]]$EngineArgs) {
+function Get-EnginePlan([string[]]$EngineArgs) {
     (Invoke-Host -Script $eng -ScriptArgs (@('-Plan', '-NoPrompt') + $EngineArgs)).Text
 }
-function Engine-Count([string[]]$EngineArgs) {
+function Get-EngineCount([string[]]$EngineArgs) {
     $r = Invoke-Host -Script $eng -ScriptArgs (@('-Plan', '-NoPrompt') + $EngineArgs)
     $m = [regex]::Match($r.Out, 'Selected\s*:\s*(\d+)')
     if ($m.Success) { [int]$m.Groups[1].Value } else { 0 }
 }
-function Menu-Sel([string[]]$MenuArgs) {
+function Get-MenuSelection([string[]]$MenuArgs) {
     , @(& powershell -NoProfile -ExecutionPolicy Bypass -File $menu -Mode sel -Lang en @MenuArgs)
 }
 
 try {
     Write-Host ''
     Write-Host '=== preset counts ===' -ForegroundColor Cyan
-    $nCons = Engine-Count @('-Preset', 'conservative')
-    $nBal  = Engine-Count @('-Preset', 'balanced')
-    $nAgg  = Engine-Count @('-Preset', 'aggressive')
+    $nCons = Get-EngineCount @('-Preset', 'conservative')
+    $nBal  = Get-EngineCount @('-Preset', 'balanced')
+    $nAgg  = Get-EngineCount @('-Preset', 'aggressive')
     Check 'conservative resolves' ($nCons -gt 0) "count=$nCons"
     Check 'preset hierarchy holds' ($nCons -lt $nBal -and $nBal -lt $nAgg) "$nCons < $nBal < $nAgg"
 
     Write-Host ''
     Write-Host '=== -Only is authoritative, not additive ===' -ForegroundColor Cyan
-    Check 'single id' ((Engine-Count @('-Preset', 'balanced', '-Only', 'ads.cdm.silent-install')) -eq 1)
-    Check 'comma bundle splits' ((Engine-Count @('-Preset', 'balanced', '-Only', 'ads.cdm.silent-install,apps.maps')) -eq 2)
-    Check 'only does not union with preset' ((Engine-Count @('-Preset', 'aggressive', '-Only', 'ads.cdm.silent-install')) -eq 1) 'aggressive has 74 actions; -Only must still yield 1'
-    Check 'unknown id yields nothing' ((Engine-Count @('-Preset', 'balanced', '-Only', 'no.such.id')) -eq 0)
-    $catCount = Engine-Count @('-Preset', 'balanced', '-Only', 'telemetry')
+    Check 'single id' ((Get-EngineCount @('-Preset', 'balanced', '-Only', 'ads.cdm.silent-install')) -eq 1)
+    Check 'comma bundle splits' ((Get-EngineCount @('-Preset', 'balanced', '-Only', 'ads.cdm.silent-install,apps.maps')) -eq 2)
+    Check 'only does not union with preset' ((Get-EngineCount @('-Preset', 'aggressive', '-Only', 'ads.cdm.silent-install')) -eq 1) 'aggressive has 74 actions; -Only must still yield 1'
+    Check 'unknown id yields nothing' ((Get-EngineCount @('-Preset', 'balanced', '-Only', 'no.such.id')) -eq 0)
+    $catCount = Get-EngineCount @('-Preset', 'balanced', '-Only', 'telemetry')
     Check 'category id expands' ($catCount -gt 1) "telemetry resolved to $catCount"
 
     Write-Host ''
     Write-Host '=== -Skip wins over -Only and preset ===' -ForegroundColor Cyan
-    Check 'skip beats only' ((Engine-Count @('-Preset', 'balanced', '-Only', 'ads.cdm.silent-install,apps.maps', '-Skip', 'apps.maps')) -eq 1)
-    Check 'skip subtracts from preset' ((Engine-Count @('-Preset', 'balanced', '-Skip', 'telemetry')) -lt $nBal)
+    Check 'skip beats only' ((Get-EngineCount @('-Preset', 'balanced', '-Only', 'ads.cdm.silent-install,apps.maps', '-Skip', 'apps.maps')) -eq 1)
+    Check 'skip subtracts from preset' ((Get-EngineCount @('-Preset', 'balanced', '-Skip', 'telemetry')) -lt $nBal)
 
     Write-Host ''
     Write-Host '=== -FromFile ===' -ForegroundColor Cyan
     $sel = Join-Path $tmp 'sel.txt'
     [IO.File]::WriteAllText($sel, "ads.cdm.silent-install`napps.maps`nprivacy.advertising-id`n", (New-Object Text.UTF8Encoding($false)))
-    Check 'reads three ids' ((Engine-Count @('-Preset', 'conservative', '-FromFile', $sel)) -eq 3)
+    Check 'reads three ids' ((Get-EngineCount @('-Preset', 'conservative', '-FromFile', $sel)) -eq 3)
     $sel2 = Join-Path $tmp 'sel2.txt'
     [IO.File]::WriteAllText($sel2, "# a comment`n`nads.cdm.silent-install`n   apps.maps   `n", (New-Object Text.UTF8Encoding($false)))
-    Check 'ignores comments and blank lines' ((Engine-Count @('-Preset', 'conservative', '-FromFile', $sel2)) -eq 2)
-    Check 'skip still wins over fromfile' ((Engine-Count @('-Preset', 'conservative', '-FromFile', $sel, '-Skip', 'apps.maps')) -eq 2)
+    Check 'ignores comments and blank lines' ((Get-EngineCount @('-Preset', 'conservative', '-FromFile', $sel2)) -eq 2)
+    Check 'skip still wins over fromfile' ((Get-EngineCount @('-Preset', 'conservative', '-FromFile', $sel, '-Skip', 'apps.maps')) -eq 2)
 
     Write-Host ''
     Write-Host '=== deselection survives the round trip (the important one) ===' -ForegroundColor Cyan
@@ -97,15 +97,15 @@ try {
     # the engine. If -Only were additive, deselected items would come back.
     Set-StrictMode -Off
     $minusFile = Join-Path $tmp 'minus.txt'
-    $base = Menu-Sel @('-Preset', 'balanced', '-PlusFile', $blank, '-MinusFile', $blank)
+    $base = Get-MenuSelection @('-Preset', 'balanced', '-PlusFile', $blank, '-MinusFile', $blank)
     $drop = @($base | Select-Object -First 10)
     [IO.File]::WriteAllText($minusFile, (($drop -join "`n") + "`n"), (New-Object Text.UTF8Encoding($false)))
-    $after = Menu-Sel @('-Preset', 'balanced', '-PlusFile', $blank, '-MinusFile', $minusFile)
+    $after = Get-MenuSelection @('-Preset', 'balanced', '-PlusFile', $blank, '-MinusFile', $minusFile)
     Check 'menu honours the removals' ($after.Count -eq $base.Count - 10) "$($base.Count) - 10 = $($after.Count)"
 
     $rt = Join-Path $tmp 'roundtrip.txt'
     [IO.File]::WriteAllText($rt, (($after -join "`n") + "`n"), (New-Object Text.UTF8Encoding($false)))
-    $engineCount = Engine-Count @('-Preset', 'balanced', '-FromFile', $rt)
+    $engineCount = Get-EngineCount @('-Preset', 'balanced', '-FromFile', $rt)
     Check 'engine matches the menu exactly' ($engineCount -eq $after.Count) "menu=$($after.Count) engine=$engineCount"
     $readded = @($drop | Where-Object { $after -contains $_ })
     Check 'no removed item came back' ($readded.Count -eq 0) ("re-added: " + ($readded -join ', '))
@@ -113,7 +113,7 @@ try {
 
     Write-Host ''
     Write-Host '=== preview and dry run must not change anything ===' -ForegroundColor Cyan
-    $planOut = Engine-Plan @('-Preset', 'conservative')
+    $planOut = Get-EnginePlan @('-Preset', 'conservative')
     Check 'plan says it is a preview' ($planOut -match 'PREVIEW ONLY|Preview only') 'must warn that nothing was changed'
     Check 'plan offers no restore script' (-not ($planOut -match 'Restore:'))
 
@@ -128,11 +128,11 @@ try {
 
     Write-Host ''
     Write-Host '=== bilingual output ===' -ForegroundColor Cyan
-    $zh = Engine-Plan @('-Preset', 'conservative', '-Language', 'zh')
-    $en = Engine-Plan @('-Preset', 'conservative', '-Language', 'en')
+    $zh = Get-EnginePlan @('-Preset', 'conservative', '-Language', 'zh')
+    $en = Get-EnginePlan @('-Preset', 'conservative', '-Language', 'en')
     Check 'zh output contains Chinese' ($zh -match '[\u4e00-\u9fff]') 'Chinese strings decoded correctly'
     Check 'en output contains no Chinese titles' (-not ($en -match '[\u4e00-\u9fff]{3,}')) 'English fallback works'
-    Check 'zh and en select the same actions' ((Engine-Count @('-Preset', 'conservative', '-Language', 'zh')) -eq (Engine-Count @('-Preset', 'conservative', '-Language', 'en')))
+    Check 'zh and en select the same actions' ((Get-EngineCount @('-Preset', 'conservative', '-Language', 'zh')) -eq (Get-EngineCount @('-Preset', 'conservative', '-Language', 'en')))
 }
 finally {
     Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue

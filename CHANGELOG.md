@@ -6,6 +6,34 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **`tests/Test-Parse.ps1`** — the syntax gate. Parses every PowerShell file and
+  verifies the file-encoding rules (BOM for `.ps1`/`.psd1`, no BOM and CRLF for `.bat`).
+- **`tests/Test-Analyzer.ps1`** — the lint gate, runnable locally and in CI.
+- **`docs/LINTING.md`** — why syntax and lint are separate gates, the current finding
+  counts, and the reasoning behind each excluded rule.
+
+### Fixed
+
+- **The PowerShell did not previously pass PSScriptAnalyzer.** It had only been
+  parser-checked. Running PSScriptAnalyzer 1.25.0 with its full default ruleset found
+  106 findings (0 errors, 73 warnings); the actionable ones are now fixed in code.
+- `Invoke-OneDriveAction` declared an `$Action` parameter it never used.
+- `New-Journal` renamed to `Initialize-Journal`: the `New-` verb asserted a state change
+  the function deliberately does not make (a dry run must leave no trace on disk).
+- `Emit-Catalog` renamed to `Write-CatalogJson`; the dead `Emit-Plan` helper was deleted.
+- `Write-Journal` is no longer called with positional arguments.
+- Non-ASCII comments in `.github/PSScriptAnalyzerSettings.psd1` lacked the BOM that
+  Windows PowerShell 5.1 needs, which the analyzer's own encoding rule caught.
+
+### Notes
+
+- `[SuppressMessageAttribute]` is only valid inside a function body before `param()`.
+  Placing it above a `function` keyword is a parse error, and
+  `[CmdletBinding(SupportsShouldProcess)]` is not valid on a function in Windows
+  PowerShell 5.1 at all. `Test-Parse.ps1` now catches both classes of mistake.
+
 ## [0.1.0] - 2026-09-13
 
 First public release.
