@@ -109,6 +109,80 @@ $hasTarget = ($joined -match 'HKCU|HKLM|service |task |uninstall ') -or $focus.t
 Check 'detail shows the target' $hasTarget ("target=" + $focus.target)
 
 # ---------------------------------------------------------------------------
+Write-Head 'exactly one pane shows the focus arrow'
+# Both panes used to draw '>' on their cursor row at the same time, so the frame
+# showed two focus markers and no way to tell which pane the keyboard was in.
+function Get-LeftCell  { param([string]$Line, [int]$LeftWidth) $Line.Substring(1, $LeftWidth) }
+function Get-RightCell { param([string]$Line, [int]$LeftWidth) $Line.Substring($LeftWidth + 2) }
+function Get-LeftWidth { param([int]$Width) [Math]::Max(24, [int](($Width - 2) * 0.38)) }
+function Get-DetailRow {
+    # The detail block is the only place the risk tag appears.
+    param([string[]]$Frame, [int]$LeftWidth)
+    for ($i = 0; $i -lt $Frame.Count; $i++) {
+        if ((Get-RightCell $Frame[$i] $LeftWidth) -match '\[(low|medium|high)\]\s*\|?$') { return $i }
+    }
+    return -1
+}
+$lw = Get-LeftWidth 100
+foreach ($pane in 'list', 'detail') {
+    $st = Initialize-TuiState -Catalog $cat -Preset 'balanced' -Language 'en'
+    $st.Pane = $pane; $st.Mode = $pane
+    $f = Get-TuiFrame -State $st -Width 100 -Height 30
+    $marks = @()
+    foreach ($line in $f) {
+        $l = Get-LeftCell $line $lw
+        $r = Get-RightCell $line $lw
+        if ($l -match '^>') { $marks += 'left' }
+        if ($r -match '^>') { $marks += 'right' }
+    }
+    Check "pane=$pane has exactly one arrow" ($marks.Count -eq 1) ($marks -join '+')
+    $expected = if ($pane -eq 'list') { 'left' } else { 'right' }
+    Check "pane=$pane arrow is in the focused pane" ($marks.Count -eq 1 -and $marks[0] -eq $expected) ($marks -join '+')
+}
+
+# ---------------------------------------------------------------------------
+Write-Head 'the detail block never moves'
+# It used to sit directly under the action list, so a category with one action put
+# the detail near the top and a long one put it near the middle: the pane had no
+# stable shape and the eye had to re-find it on every category change.
+$rows = @()
+foreach ($case in @(@(0, 0), @(0, 20), @(1, 0), @(2, 0))) {
+    $st = Initialize-TuiState -Catalog $cat -Preset 'balanced' -Language 'en'
+    $st.ListIndex = $case[0]; $st.DetailIndex = $case[1]
+    $f = Get-TuiFrame -State $st -Width 100 -Height 30
+    $rows += (Get-DetailRow $f $lw)
+}
+Check 'detail block found in every case' ((@($rows | Where-Object { $_ -lt 0 })).Count -eq 0) ($rows -join ',')
+Check 'detail row is identical for every category and cursor' ((@($rows | Select-Object -Unique)).Count -eq 1) ("rows: " + ($rows -join ','))
+
+# ---------------------------------------------------------------------------
+Write-Head 'detail text wraps instead of being cut off'
+$w = Get-TuiWrap -Text ('x' * 200) -Width 20 -Max 3
+Check 'wrap respects the max row count' ($w.Count -eq 3) ("{0} rows" -f $w.Count)
+Check 'wrap respects the width' ((@($w | Where-Object { (Get-WidthOf $_) -gt 20 }).Count) -eq 0) ($w -join '/')
+Check 'a cut line is marked with an ellipsis' ($w[2].EndsWith([string][char]0x2026)) $w[2]
+$w2 = Get-TuiWrap -Text 'short' -Width 20 -Max 3
+Check 'text that fits is not ellipsised' ($w2.Count -eq 1 -and -not $w2[0].EndsWith([string][char]0x2026)) ($w2 -join '/')
+$w3 = Get-TuiWrap -Text '' -Width 20 -Max 3
+Check 'empty text wraps to nothing' ($w3.Count -eq 0) ("{0} rows" -f $w3.Count)
+# Chinese is two columns wide, so a character-count wrap would overflow the pane.
+$w4 = Get-TuiWrap -Text ('汉' * 40) -Width 21 -Max 5
+Check 'cjk wrap respects the width' ((@($w4 | Where-Object { (Get-WidthOf $_) -gt 21 }).Count) -eq 0) (($w4 | ForEach-Object { Get-WidthOf $_ }) -join ',')
+
+# The rationale must actually reach the screen: no blank rows below a cut sentence.
+$st = Initialize-TuiState -Catalog $cat -Preset 'aggressive' -Language 'en'
+$st.ListIndex = 0; $st.DetailIndex = 0
+$f = Get-TuiFrame -State $st -Width 120 -Height 34
+$lw120  = Get-LeftWidth 120
+$row    = Get-DetailRow $f $lw120
+$rightW = (120 - 2) - $lw120 - 1
+$why = Get-TuiText -Object (Get-TuiActionAt $st) -Base 'why' -Language 'en'
+$wrapped = Get-TuiWrap -Text $why -Width $rightW -Max 2
+Check 'rationale is wrapped across the rows it was given' ($wrapped.Count -ge 1) ("{0} rows, width {1}" -f $wrapped.Count, $rightW)
+Check 'wrapped rationale appears verbatim in the frame' ((Get-RightCell $f[$row + 1] $lw120).TrimEnd('|').Trim() -eq $wrapped[0]) $wrapped[0]
+Check 'no blank row sits between the rationale rows' ($wrapped.Count -lt 2 -or (Get-RightCell $f[$row + 2] $lw120).Trim().Trim('|') -ne '') 'second rationale row is used'
+
+# ---------------------------------------------------------------------------
 Write-Head 'checkbox state is visible per row'
 $st = Initialize-TuiState -Catalog $cat -Preset 'conservative' -Language 'en'
 $st.ListIndex = 0; $st.DetailIndex = 0; $st.Pane = 'detail'; $st.Mode = 'detail'

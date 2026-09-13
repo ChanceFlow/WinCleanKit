@@ -94,6 +94,52 @@ function Get-TuiText {
     return $Object.$Base
 }
 
+function Get-TuiWrap {
+    <#
+      Break text into at most $Max lines that each fit $Width display columns.
+
+      Wrapping is by display width rather than character count, so Chinese text
+      does not overshoot the pane border. When there is more text than fits, the
+      last line ends in an ellipsis: a sentence that was cut is then visibly cut,
+      instead of the reader wondering whether the rationale was empty.
+    #>
+    [CmdletBinding()]
+    param([string]$Text, [int]$Width, [int]$Max)
+
+    $lines = New-Object System.Collections.Generic.List[string]
+    if ([string]::IsNullOrEmpty($Text) -or $Width -lt 2 -or $Max -lt 1) { return , $lines.ToArray() }
+
+    $chars = ($Text -replace '[\r\n]+', ' ').Trim().ToCharArray()
+    $cur = ''
+    $used = 0
+    $i = 0
+    while ($i -lt $chars.Count) {
+        $ch = [string]$chars[$i]
+        $cw = Get-TuiWidth $ch
+        if (($used + $cw) -gt $Width) {
+            [void]$lines.Add($cur)
+            $cur = ''
+            $used = 0
+            if ($lines.Count -ge $Max) { break }
+            # Do not advance: re-test this character on the line just started.
+            continue
+        }
+        $cur += $ch
+        $used += $cw
+        $i++
+    }
+    if ($lines.Count -lt $Max -and $used -gt 0) { [void]$lines.Add($cur) }
+
+    if ($i -lt $chars.Count -and $lines.Count -gt 0) {
+        $last = $lines[$lines.Count - 1]
+        while ($last.Length -gt 0 -and (Get-TuiWidth $last) -gt ($Width - 1)) {
+            $last = $last.Substring(0, $last.Length - 1)
+        }
+        $lines[$lines.Count - 1] = $last + [char]0x2026
+    }
+    return , $lines.ToArray()
+}
+
 function Get-TuiTargetLine {
     <#
       One line describing what an action actually does, so the detail pane answers
@@ -231,10 +277,22 @@ function Get-TuiBody {
         [void]$leftLines.Add($line)
     }
 
-    # ---- right: actions --------------------------------------------------
-    $rightLines = New-Object System.Collections.Generic.List[string]
+    # ---- right: actions, then a detail block pinned to the bottom ---------
+    # The detail block has a fixed height and always occupies the last rows, so
+    # neither moving the cursor nor changing category can shift it: the pane has
+    # one stable structure instead of a block that floats to wherever the focused
+    # action happens to end. Every remaining row belongs to the action list, which
+    # is also why the rationale can be given room to wrap rather than be cut off
+    # with an ellipsis while blank rows sit underneath it.
     $items = Get-TuiGroupAction $State
-    $listH = [Math]::Max(3, [int]($Height * 0.55))
+    # A taller terminal gives the detail more room, which is what lets a long
+    # rationale be shown instead of cut. The height depends only on the terminal
+    # size, never on the focused action, so the block still never moves.
+    $detailH = [Math]::Min(10, [Math]::Max(6, [int]($Height * 0.33)))
+    $detailH = [Math]::Min($detailH, [Math]::Max(1, $Height - 1))
+    $listH = [Math]::Max(1, $Height - $detailH)
+
+    $rightLines = New-Object System.Collections.Generic.List[string]
     $dTop = Get-TuiWindow -Total $items.Count -Height $listH -Cursor $State.DetailIndex
     for ($i = 0; $i -lt $listH; $i++) {
         $ai = $dTop + $i
@@ -242,29 +300,36 @@ function Get-TuiBody {
         $a = $items[$ai]
         $on = $State.Selected.ContainsKey($a.id)
         $box = if ($on) { '[x]' } else { '[ ]' }
-        $focus = ($ai -eq $State.DetailIndex)
-        $mark = if ($focus) { '>' } else { ' ' }
+        # Same rule as the category pane: the arrow belongs to the pane that has
+        # the keyboard, the other pane marks its cursor row quietly.
+        $mark = ''
+        if ($ai -eq $State.DetailIndex) { $mark = if ($State.Pane -eq 'detail') { '>' } else { '-' } }
         $cur = Get-TuiText -Object $a -Base 'title' -Language $State.Language
         [void]$rightLines.Add(("{0} {1} {2}" -f $mark, $box, $cur))
     }
 
-    # detail pane for the focused action
+    # detail block for the focused action
+    $detail = New-Object System.Collections.Generic.List[string]
     $cur = Get-TuiActionAt $State
     if ($cur) {
         $riskNames = if ($zh) { @{ low = '低'; medium = '中'; high = '高' } } else { @{ low = 'low'; medium = 'medium'; high = 'high' } }
         $targetLabel = if ($zh) { '触及: ' } else { 'Touches: ' }
-        $why    = Get-TuiText -Object $cur -Base 'why' -Language $State.Language
-        $target = Get-TuiTargetLine -Action $cur
-        [void]$rightLines.Add('')
-        [void]$rightLines.Add(("{0}   [{1}]" -f (Get-TuiText -Object $cur -Base 'title' -Language $State.Language), $riskNames[$cur.risk]))
-        [void]$rightLines.Add($why)
-        [void]$rightLines.Add(("{0}{1}" -f $targetLabel, $target))
+        $rows    = [Math]::Max(1, $detailH - 2)          # the separator and the title take two
+        $whyRows = [Math]::Max(1, [int][Math]::Ceiling($rows / 2))
+        $tgtRows = [Math]::Max(1, $rows - $whyRows)
+        [void]$detail.Add('')                            # separator between list and detail
+        [void]$detail.Add(("{0}   [{1}]" -f (Get-TuiText -Object $cur -Base 'title' -Language $State.Language), $riskNames[$cur.risk]))
+        foreach ($x in (Get-TuiWrap -Text (Get-TuiText -Object $cur -Base 'why' -Language $State.Language) -Width $RightWidth -Max $whyRows)) { [void]$detail.Add($x) }
+        foreach ($x in (Get-TuiWrap -Text ("{0}{1}" -f $targetLabel, (Get-TuiTargetLine -Action $cur)) -Width $RightWidth -Max $tgtRows)) { [void]$detail.Add($x) }
     }
+    while ($detail.Count -lt $detailH) { [void]$detail.Add('') }
+    while ($detail.Count -gt $detailH) { $detail.RemoveAt($detail.Count - 1) }
 
     # ---- combine, fitting both panes to height ---------------------------
     for ($i = 0; $i -lt $Height; $i++) {
         $l = if ($i -lt $leftLines.Count) { $leftLines[$i] } else { '' }
-        $r = if ($i -lt $rightLines.Count) { $rightLines[$i] } else { '' }
+        if ($i -lt $listH) { $r = if ($i -lt $rightLines.Count) { $rightLines[$i] } else { '' } }
+        else               { $r = $detail[$i - $listH] }
         [void]$out.Add('|' + (Format-TuiCell $l $LeftWidth) + '|' + (Format-TuiCell $r $RightWidth) + '|')
     }
     return , $out.ToArray()

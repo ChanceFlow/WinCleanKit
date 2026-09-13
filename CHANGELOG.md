@@ -108,6 +108,20 @@ All notable changes to this project are documented here. The format follows
   as cmd could loop. Every prompt now goes through one `:ask` helper that seeds a
   sentinel value, distinguishes "the user pressed Enter" from "there is no more
   input", and unwinds cleanly through the menu labels when the stream ends.
+- **Both panes drew the focus arrow at the same time.** The action pane marked its
+  cursor row with `>` even while the keyboard was in the category pane, so the
+  frame showed two focus markers and no way to tell where input would land. Only
+  the focused pane draws `>`, as it always did on the left; the other pane marks
+  its cursor row with `-`.
+- **The detail block moved around and left the pane half empty.** It sat directly
+  under the action list, so a category with one action pushed it near the top and a
+  long one put it in the middle, and because the list was pinned to 55% of the
+  height, five rows sat blank underneath a rationale that had already been cut off
+  with an ellipsis. The pane is now one stable shape: the action list fills every
+  row except the detail block, which is pinned to the bottom and sized from the
+  terminal height, so it cannot move. The rationale and the "touches" line wrap
+  across the rows they are given instead of being cut, and carry an ellipsis only
+  when the text genuinely does not fit.
 - **The menu-data reads failed inside `for /f`.** A command containing double
   quotes is torn apart unless the loop is declared `usebackq`, so invoking the
   helper by full path reported "cannot find the file"; and calling a batch label
