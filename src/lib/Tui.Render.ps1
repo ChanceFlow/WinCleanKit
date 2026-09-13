@@ -386,18 +386,51 @@ function Get-TuiHelpBody {
     return , $out.ToArray()
 }
 
+function Get-TuiConsoleMode {
+    <#
+      The console output mode the TUI needs, given the current one.
+
+      Pure, so a test can check the flags without owning a console. Two flags
+      matter and both exist to stop the screen from scrolling:
+
+        0x0004 ENABLE_VIRTUAL_TERMINAL_PROCESSING - interpret ANSI escapes
+        0x0008 DISABLE_NEWLINE_AUTO_RETURN        - a write that reaches the last
+               column must not move to the next row
+        0x0002 ENABLE_WRAP_AT_EOL_OUTPUT is cleared for the same reason.
+
+      Terminal.Gui's NetDriver - the driver behind Out-ConsoleGridView - asks
+      Windows for exactly this, and pins the screen buffer to the window size on
+      top of it. Drawing a full-width row leaves the cursor on the last column
+      with the wrap pending; the next thing written then wraps, and a wrap past
+      the bottom row scrolls the whole screen. That is what makes an interface
+      creep or jump on every keypress.
+    #>
+    [CmdletBinding()]
+    param([uint32]$Current)
+    return [uint32](($Current -bor 0x0004 -bor 0x0008) -band 0xFFFFFFFD)
+}
+
 function Format-TuiFrame {
     <#
-      Wrap a frame in the escape sequences that put it on screen: home the cursor,
-      write the whole frame in one call, hide the cursor while drawing.
+      Put a frame on screen.
+
+      Every row is positioned absolutely and no line feed is ever written, which
+      is how Terminal.Gui's NetDriver draws: a newline after the last row - or a
+      full-width row reaching the wrap margin - makes the console advance past
+      the bottom line, and that advance scrolls the screen. Rows are padded to the
+      full width by Get-TuiFrame, so nothing needs erasing and no ESC[K is sent;
+      erasing to end of line from the last column would rub out that row's final
+      character.
     #>
     [CmdletBinding()]
     param([string[]]$Lines)
     $esc = $script:Esc
     $sb = New-Object System.Text.StringBuilder
-    [void]$sb.Append("$esc[?25l")      # hide cursor
-    [void]$sb.Append("$esc[H")         # home
-    foreach ($l in $Lines) { [void]$sb.Append($l); [void]$sb.Append("$esc[K`r`n") }
-    [void]$sb.Append("$esc[?25h")      # show cursor
+    [void]$sb.Append("$esc[?25l")        # hide the cursor while drawing
+    for ($i = 0; $i -lt $Lines.Count; $i++) {
+        [void]$sb.Append("$esc[$($i + 1);1H")
+        [void]$sb.Append($Lines[$i])
+    }
+    [void]$sb.Append("$esc[?25h")        # show it again
     return $sb.ToString()
 }

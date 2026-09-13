@@ -95,3 +95,32 @@ runs before the lint gate.
 
 Suppressions in this codebase always carry a `Justification`, so the reason is readable
 where the code is, rather than hidden in a config file.
+
+## The one thing no gate can check
+
+Every gate above reads files. None of them can see what a terminal does with the
+bytes a TUI writes, and that is exactly where this project's worst interface bug
+lived: the frame was the right size and contained the right characters, but the
+painter wrote a line feed after the last row, so the console scrolled and the whole
+interface sat one row too high — and re-scrolled on every repaint. The frames were
+verified; the painting was not.
+
+[`tools/Test-TuiScroll.ps1`](../tools/Test-TuiScroll.ps1) closes that gap. It has to
+be run by hand in a real console window, but it does not ask you to judge anything
+by eye:
+
+```
+.\tools\Test-TuiScroll.ps1
+```
+
+It paints a frame whose rows are numbered, repaints it, then reads the console
+buffer back with `$Host.UI.RawUI.GetBufferContents` and compares every row against
+the frame it meant to draw. It also paints with the old painter as a control, and
+**fails the run if that control does not reproduce the scroll** — a green result is
+only worth something if the test can still detect the bug it exists for.
+
+The rules the painter follows are documented next to `Format-TuiFrame` in
+[`src/lib/Tui.Render.ps1`](../src/lib/Tui.Render.ps1): absolute per-row positioning,
+no line feeds at all, `DISABLE_NEWLINE_AUTO_RETURN` set, `ENABLE_WRAP_AT_EOL_OUTPUT`
+cleared, and the screen buffer pinned to the window size. That is what Terminal.Gui's
+NetDriver does, and that is the driver behind Microsoft's `Out-ConsoleGridView`.

@@ -7,6 +7,11 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **`tools/Test-TuiScroll.ps1`** — the check the gates cannot make. It paints a
+  frame in a real console window, repaints it, then reads the whole console buffer
+  back and compares it against the frame it meant to draw. It also paints with the
+  old code as a control and fails the run if that control does not reproduce the
+  scroll, so a clean result cannot come from a test that detects nothing.
 - **A full-screen TUI.** The interactive interface is now a keyboard-driven,
   panel-based application instead of a numbered menu: a header showing the armed
   plan and its highest risk, a category pane with per-category selected counts, an
@@ -84,6 +89,20 @@ All notable changes to this project are documented here. The format follows
   through `git remote -v`.
 
 ### Fixed
+- **The whole interface sat one row too high and jumped on every keypress.**
+  `Format-TuiFrame` wrote a carriage return and line feed after every row, the last
+  one included, and every row is exactly as wide as the terminal. On a window of N
+  rows that advances the cursor past the bottom line, so the console scrolls: the
+  frame was already one row off the moment it was painted, and the same thing
+  happened again on each repaint. This is the failure the gates could not see — the
+  frames were correct, only the painting was wrong, and no automated run had ever
+  looked at what the terminal did with them. Painting now follows Terminal.Gui's
+  NetDriver, the driver behind Microsoft's Out-ConsoleGridView: each row is
+  positioned absolutely and no line feed is written at all, the console's
+  `DISABLE_NEWLINE_AUTO_RETURN` output mode is set and `ENABLE_WRAP_AT_EOL_OUTPUT`
+  cleared, and the screen buffer is pinned to the window size so no scrollback
+  exists for a stray line feed to scroll. `ESC[K` is gone too: erasing to end of
+  line from the last column rubs out that row's final character.
 - **`run.bat` / `WinCleanKit.bat` could not start at all when launched the way a
   user launches them.** cmd re-resolves a parameter that carries a script path
   against the *current* directory on every expansion, not the directory the file
@@ -173,7 +192,10 @@ All notable changes to this project are documented here. The format follows
 - **What is still verified by hand, stated plainly:** the key loop itself. Reading
   keys and repainting needs a real interactive console, which no automated run has.
   It is kept deliberately thin, guarded statically by the parse and lint gates, and
-  every function it dispatches to is covered by tests/Test-Tui.ps1.
+  every function it dispatches to is covered by tests/Test-Tui.ps1. What the
+  terminal does with the frame is now covered by `tools/Test-TuiScroll.ps1`, which
+  must be run by hand in a real console window but reads the buffer back and judges
+  the result objectively instead of by eye.
 - The TUI reuses the engine's own preview and execution paths rather than
   duplicating them, so a change to how a plan is applied cannot drift between the
   two interfaces.

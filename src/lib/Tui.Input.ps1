@@ -15,7 +15,8 @@
 
     TESTING NOTE, stated plainly: the key loop cannot be exercised by an automated
     run, because that needs a real interactive console. What is verified instead is
-    the logic it dispatches to (tests/Test-Tui.ps1, 55 checks) plus static analysis.
+    the logic it dispatches to (tests/Test-Tui.ps1) and the frame contract
+    (tests/Test-TuiRender.ps1) plus static analysis.
     This file is kept deliberately small so there is little in it that could be
     wrong, and every failure path restores the terminal.
 
@@ -27,6 +28,9 @@
 #>
 
 Set-StrictMode -Version 2.0
+
+$script:TuiSavedMode   = $null
+$script:TuiSavedBuffer = $null
 
 if (-not ('Tui.Native' -as [type])) {
     Add-Type -Namespace Tui -Name Native -MemberDefinition @'
@@ -43,8 +47,12 @@ public static extern bool SetConsoleMode(System.IntPtr hConsoleHandle, uint dwMo
 
 function Enable-TuiAnsi {
     <#
-      Ask the legacy console host to interpret ANSI. Windows Terminal already does,
-      so a failure here is not fatal: the caller falls back.
+      Ask the legacy console host to interpret ANSI, and to stop advancing the
+      cursor when a write reaches the last column. Windows Terminal already
+      interprets ANSI, so a failure here is not fatal: the caller falls back.
+
+      The mode the TUI asks for is computed by Get-TuiConsoleMode, which lives in
+      the renderer and is pure, so the flags themselves are covered by a test.
     #>
     [CmdletBinding()]
     param()
@@ -52,12 +60,30 @@ function Enable-TuiAnsi {
         $handle = [Tui.Native]::GetStdHandle(-11)          # STD_OUTPUT_HANDLE
         $mode = [uint32]0
         if (-not [Tui.Native]::GetConsoleMode($handle, [ref]$mode)) { return $false }
-        # 0x0004 ENABLE_VIRTUAL_TERMINAL_PROCESSING
-        if (($mode -band 0x0004) -ne 0) { return $true }
-        return [Tui.Native]::SetConsoleMode($handle, ($mode -bor 0x0004))
+        $script:TuiSavedMode = $mode
+        $want = Get-TuiConsoleMode -Current $mode
+        if ($mode -eq $want) { return $true }
+        return [Tui.Native]::SetConsoleMode($handle, $want)
     } catch {
         return $false
     }
+}
+
+function Restore-TuiConsoleMode {
+    <#
+      Put the output mode back exactly as it was found. Never throws: this runs
+      from a finally block, and an exception here would mask the real result.
+    #>
+    [CmdletBinding()]
+    param()
+    if ($null -eq $script:TuiSavedMode) { return }
+    try {
+        $handle = [Tui.Native]::GetStdHandle(-11)
+        $null = [Tui.Native]::SetConsoleMode($handle, [uint32]$script:TuiSavedMode)
+    } catch {
+        $null = $_
+    }
+    $script:TuiSavedMode = $null
 }
 
 function Enter-TuiScreen {
@@ -72,6 +98,18 @@ function Enter-TuiScreen {
     }
     # Alternate screen buffer: the user's scrollback survives the session.
     [Console]::Write("$esc[?1049h")
+    # Automatic wrap off. A full-width row must leave the cursor on the last
+    # column rather than move it to the next row.
+    [Console]::Write("$esc[?7l")
+    try {
+        # Pin the buffer to the window, as Terminal.Gui does. With no buffer rows
+        # below the window there is no scrollback for a stray line feed to scroll,
+        # so even a mistake in a frame cannot make the screen creep.
+        $script:TuiSavedBuffer = @([Console]::BufferWidth, [Console]::BufferHeight)
+        [Console]::SetBufferSize([Console]::WindowWidth, [Console]::WindowHeight)
+    } catch {
+        $script:TuiSavedBuffer = $null
+    }
     [Console]::Write("$esc[2J$esc[H")
 }
 
@@ -81,7 +119,13 @@ function Exit-TuiScreen {
     $esc = [char]27
     try {
         [Console]::Write("$esc[0m")
+        [Console]::Write("$esc[?7h")        # automatic wrap back on
         [Console]::Write("$esc[?1049l")     # back to the normal buffer
+        if ($null -ne $script:TuiSavedBuffer) {
+            [Console]::SetBufferSize($script:TuiSavedBuffer[0], $script:TuiSavedBuffer[1])
+            $script:TuiSavedBuffer = $null
+        }
+        Restore-TuiConsoleMode
         [Console]::CursorVisible = $true
     } catch {
         # Restoring the terminal must never throw: if this fails the session is

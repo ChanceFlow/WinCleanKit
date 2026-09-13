@@ -229,10 +229,30 @@ foreach ($w in 60, 80, 140, 200) {
 
 $frameLines = Get-TuiFrame -State $st -Width 100 -Height 30
 $packed = Format-TuiFrame -Lines $frameLines
-Check 'frame wraps in cursor control' ($packed.Contains([char]27 + '[H')) 'homes the cursor'
-Check 'frame hides and restores the cursor' ($packed.Contains([char]27 + '[?25l') -and $packed.Contains([char]27 + '[?25h'))
+$esc = [char]27
+
+# This is the contract that keeps the screen still. A line feed after the last
+# row, or a full-width row reaching the wrap margin, makes the console advance
+# past the bottom line, and that advance scrolls the screen -- the interface then
+# creeps or jumps on every keypress. So: absolute positioning, no newlines.
+Check 'painted frame contains no line feed' (-not ($packed.Contains("`n") -or $packed.Contains("`r"))) 'no CR, no LF'
+Check 'painted frame never erases to end of line' (-not $packed.Contains("$esc[K")) 'ESC[K from the last column would rub out that row''s final character'
+$perRow = 0
+for ($i = 1; $i -le $frameLines.Count; $i++) { if ($packed.Contains("$esc[$i;1H")) { $perRow++ } }
+Check 'every row is positioned absolutely' ($perRow -eq $frameLines.Count) ("{0}/{1} rows" -f $perRow, $frameLines.Count)
+Check 'the first row is positioned at the top left' ($packed.Contains("$esc[1;1H")) 'row 1 column 1'
+Check 'frame hides and restores the cursor' ($packed.Contains("$esc[?25l") -and $packed.Contains("$esc[?25h"))
 $withNewline = @($frameLines | Where-Object { $_.Contains("`n") -or $_.Contains("`r") })
 Check 'no cell contains a raw newline' ($withNewline.Count -eq 0) ("{0} cells" -f $withNewline.Count)
+
+# The console flags that make drawing a full-width row safe in the first place.
+$mode = Get-TuiConsoleMode -Current ([uint32]0x0003)     # ANSI off, wrap on
+Check 'console mode enables ANSI' (($mode -band 0x0004) -ne 0) ("0x{0:X}" -f $mode)
+Check 'console mode disables newline auto return' (($mode -band 0x0008) -ne 0) ("0x{0:X}" -f $mode)
+Check 'console mode clears wrap at end of line' (($mode -band 0x0002) -eq 0) ("0x{0:X}" -f $mode)
+Check 'console mode leaves unrelated flags alone' (((Get-TuiConsoleMode -Current ([uint32]0x0010)) -band 0x0010) -ne 0) 'bit 4 preserved'
+$mode2 = Get-TuiConsoleMode -Current ([uint32]0x0004)
+Check 'console mode is idempotent' ($mode2 -eq (Get-TuiConsoleMode -Current $mode2)) ("0x{0:X}" -f $mode2)
 
 Write-Head 'plain-text fallback'
 $supported = Test-TuiSupported
