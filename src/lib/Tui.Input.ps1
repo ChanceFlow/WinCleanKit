@@ -202,14 +202,11 @@ function Show-TuiInteraction {
         }
 
         $key = [Console]::ReadKey($true)
-        $before = @{
-            Select = $state.Selected.Count
-            List   = $state.ListIndex
-            Detail = $state.DetailIndex
-            Mode   = $state.Mode
-            Pane   = $state.Pane
-            Msg    = $state.Message
-        }
+        # One stamp of everything the frame is drawn from, taken before the key is
+        # handled and compared after. Listing the fields here by hand is what let
+        # the language toggle repaint nothing, so the list lives in
+        # Get-TuiRenderStamp, where a test can hold it to the renderer's own reads.
+        $stamp = Get-TuiRenderStamp -State $state
 
         # The opening language chooser owns the keyboard until it is answered, so
         # it is handled before the main key map rather than inside it.
@@ -253,7 +250,7 @@ function Show-TuiInteraction {
                     'p' {
                         $plan = Get-TuiPlan $state
                         if ($plan.Count -eq 0) { $state.Message = if ($state.Language -eq 'zh') { '没有选中任何项目' } else { 'nothing selected' } }
-                        else { Show-TuiPlan -Plan $plan -Language $state.Language -Engine $Engine; $lastFrame = '' }
+                        else { Show-TuiPlan -Plan $plan -Language $state.Language -Engine $Engine; $dirty = $true }
                     }
                     'x' {
                         $plan = Get-TuiPlan $state
@@ -271,7 +268,6 @@ function Show-TuiInteraction {
                     'l' {
                         $next = if ($state.Language -eq 'zh') { 'en' } else { 'zh' }
                         $state = Select-TuiLanguage -State $state -Language $next
-                        $lastFrame = ''
                     }
                     '?' { $state = Select-TuiMode -State $state -Mode 'help' }
                     default { }
@@ -287,17 +283,7 @@ function Show-TuiInteraction {
             $lastFrame = ''
         }
 
-        $after = @{
-            Select = $state.Selected.Count
-            List   = $state.ListIndex
-            Detail = $state.DetailIndex
-            Mode   = $state.Mode
-            Pane   = $state.Pane
-            Msg    = $state.Message
-        }
-        foreach ($k in $before.Keys) {
-            if ($before[$k] -ne $after[$k]) { $dirty = $true; break }
-        }
+        if ((Get-TuiRenderStamp -State $state) -ne $stamp) { $dirty = $true }
 
     }
     return $null

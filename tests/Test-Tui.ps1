@@ -257,6 +257,76 @@ Check 'detail mode focuses the detail pane' ($st.Pane -eq 'detail')
 $st = Select-TuiMode -State $st -Mode 'list'
 Check 'list mode focuses the list pane' ($st.Pane -eq 'list')
 
+# ---------------------------------------------------------------------------
+Write-Head 'the repaint stamp'
+# A frame is recomputed only when Get-TuiRenderStamp changes, so any state the
+# renderer reads and the stamp omits is a screen that silently stops updating.
+# That is not a hypothetical: on a real console the language toggle repainted
+# nothing, because the field list the stamp replaced had no language on it -- the
+# state switched, the loop saw no difference, and the old frame stayed up.
+$fresh = Initialize-TuiState -Catalog $cat -Language 'en'
+$stamp = Get-TuiRenderStamp -State $fresh
+Check 'the opening state has a stamp' ([bool]$stamp)
+Check 'the stamp is stable when nothing changes' ((Get-TuiRenderStamp -State $fresh) -eq $stamp)
+
+$mutations = [ordered]@{
+    Mode        = 'help'
+    Pane        = 'detail'
+    Language    = 'zh'
+    ListIndex   = $fresh.ListIndex + 1
+    DetailIndex = $fresh.DetailIndex + 1
+    LangIndex   = $fresh.LangIndex + 1
+    Message     = 'a message'
+}
+foreach ($field in $mutations.Keys) {
+    $one = Initialize-TuiState -Catalog $cat -Language 'en'
+    $one.$field = $mutations[$field]
+    Check ("changing {0} changes the stamp" -f $field) ((Get-TuiRenderStamp -State $one) -ne $stamp)
+}
+
+$toggled = Switch-TuiCurrent -State (Initialize-TuiState -Catalog $cat -Language 'en')
+Check 'toggling an action changes the stamp' ((Get-TuiRenderStamp -State $toggled) -ne $stamp)
+
+# Size alone would not do. A swap keeps the count identical while changing which
+# boxes are ticked, so a stamp built from the count would leave the frame stale.
+$swap = Initialize-TuiState -Catalog $cat -Language 'en'
+$off = @($cat.actions | Where-Object { -not $swap.Selected.ContainsKey($_.id) } | Select-Object -First 1).id
+$on = @($swap.Selected.Keys)[0]
+$swap.Selected.Remove($on)
+$swap.Selected[$off] = $true
+Check 'the swap really kept the count' ($swap.Selected.Count -eq $fresh.Selected.Count) ("{0} vs {1}" -f $swap.Selected.Count, $fresh.Selected.Count)
+Check 'swapping one action for another changes the stamp' ((Get-TuiRenderStamp -State $swap) -ne $stamp)
+
+# The stamp is only trustworthy if it names everything the renderer reads. Rather
+# than trusting the list above, read the renderer's own source and compare. The
+# three names that are allowed to be absent are derived: the renderer reads the
+# catalog and the precomputed groups directly, and Groups is rebuilt from
+# Catalog + Language (which is in the stamp), so neither can go stale unannounced.
+function Get-StateField {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '',
+        Justification = 'The function returns one field name per match, not a collection of fields.')]
+    param([string]$Text)
+    return @([regex]::Matches($Text, '\$[Ss]tate\.([A-Za-z_][A-Za-z0-9_]*)') |
+        ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+}
+
+$renderSrc = Get-Content (Join-Path $root 'src/lib/Tui.Render.ps1') -Raw -Encoding UTF8
+$logicSrc = Get-Content $logic -Raw -Encoding UTF8
+$stampBody = [regex]::Match($logicSrc, '(?s)function Get-TuiRenderStamp\s*\{(.*?)\r?\n\}').Groups[1].Value
+$stamped = Get-StateField $stampBody
+$rendered = Get-StateField $renderSrc
+$derived = @('Catalog', 'Groups', 'Selected')
+
+Check 'the renderer source was read' ($rendered.Count -ge 8) ($rendered -join ',')
+Check 'the stamp function was read' ($stamped.Count -ge 6) ($stamped -join ',')
+$uncovered = @($rendered | Where-Object { $_ -notin $stamped -and $_ -notin $derived })
+Check 'the stamp covers every field the renderer reads' ($uncovered.Count -eq 0) ('uncovered: ' + ($uncovered -join ', '))
+# The renderer recomputes the visible window from the cursor rather than reading the
+# stored offset, so ScrollTop is the one stamped field it does not read itself.
+$viewOnly = @('ScrollTop')
+$unused = @($stamped | Where-Object { $_ -notin $rendered -and $_ -notin $viewOnly })
+Check 'every stamped field is renderer input or tracked view state' ($unused.Count -eq 0) ('unused: ' + ($unused -join ', '))
+
 Write-Host ''
 if ($fail -eq 0) { Write-Host ("ALL PASSED  ({0} checks)" -f $pass) -ForegroundColor Green }
 else             { Write-Host ("FAILED  pass={0} fail={1}" -f $pass, $fail) -ForegroundColor Red }

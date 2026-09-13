@@ -74,6 +74,11 @@ foreach ($f in $ps1) {
     $bytes = [IO.File]::ReadAllBytes($f.FullName)
     $hasBom = ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF)
     Check "UTF-8 BOM: $rel" $hasBom 'required so PowerShell 5.1 decodes Unicode correctly'
+    # A second BOM stays in the stream as U+FEFF once the first is consumed, and an
+    # editor that "adds a BOM" to a file that already has one is one keystroke away.
+    # The result still passes the check above, so the doubling is checked for here.
+    $doubled = ($bytes.Length -ge 6 -and $bytes[3] -eq 0xEF -and $bytes[4] -eq 0xBB -and $bytes[5] -eq 0xBF)
+    Check "single BOM only: $rel" (-not $doubled) 'a doubled BOM leaves U+FEFF in the source'
 }
 
 $batPath = Join-Path $root 'src/WinCleanKit.bat'

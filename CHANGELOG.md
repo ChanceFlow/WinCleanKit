@@ -140,6 +140,20 @@ All notable changes to this project are documented here. The format follows
   cannot creep back in through a catalog edit.
 
 ### Fixed
+- **The language toggle redrew nothing.** On a real console, `l` switched the
+  language in the state and left the previous frame on screen, so the key read as
+  dead: pressing it twice produced a byte-identical screen. The key loop repainted
+  only when a hand-written list of state fields differed from the state it captured
+  before the keypress, and the language was not on that list, so the loop concluded
+  nothing had moved and skipped the frame even though every visible row was now
+  wrong. Found by driving the deployed build — sending keys to the live window from
+  a scheduled task in the interactive session and reading the console buffer back —
+  where `?`, `Esc`, `Tab`, the arrow keys and `space` all repainted (the action
+  count visibly went 45 → 46 → 45) while `l` did not. The field list is now
+  `Get-TuiRenderStamp` in `Tui.Logic.ps1`, one function that names everything a
+  frame is drawn from, and `tests/Test-Tui.ps1` holds it to the renderer's own
+  source: every `$State.<field>` the renderer reads must change the stamp, so a new
+  field cannot be drawn without also being repainted.
 - **The whole interface sat one row too high and jumped on every keypress.**
   `Format-TuiFrame` wrote a carriage return and line feed after every row, the last
   one included, and every row is exactly as wide as the terminal. On a window of N

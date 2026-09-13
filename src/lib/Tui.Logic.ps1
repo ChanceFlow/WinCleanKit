@@ -96,6 +96,39 @@ function Initialize-TuiState {
     }
 }
 
+function Get-TuiRenderStamp {
+    <#
+      Everything a frame is drawn from, as one comparable string.
+
+      The key loop repaints only when this changes, which makes it the single place
+      that decides whether what is on screen is stale. It is a function for a
+      reason: the hand-written list of fields it replaces is exactly how the
+      language toggle came to redraw nothing. `l` rebuilt the state and left the old
+      frame on screen, because the language was not one of the fields the loop
+      compared -- and the frame is only recomputed when the loop decides the state
+      moved. Any state a renderer reads and this does not return is the same bug
+      waiting to happen, so tests/Test-Tui.ps1 checks both that each field changes
+      the stamp and that the renderer reads nothing outside this list.
+    #>
+    [CmdletBinding()]
+    param($State)
+
+    # The selection is a set, so its size is not enough: an operation that swaps one
+    # action for another would leave the count unchanged and, with it, the frame.
+    $ids = @($State.Selected.Keys) | Sort-Object
+    return (@(
+        $State.Mode
+        $State.Pane
+        $State.Language
+        $State.ListIndex
+        $State.DetailIndex
+        $State.ScrollTop
+        $State.LangIndex
+        $State.Message
+        ($ids -join ',')
+    ) -join '|')
+}
+
 function Get-TuiLanguageList {
     <#
       The languages the chooser offers, in the order it shows them. The first is
