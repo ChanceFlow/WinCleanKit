@@ -228,7 +228,7 @@ Start-Sleep -Milliseconds 250
 Write-ProbeReport ''
 Write-ProbeReport '=== the real frame, with the cursor moving ===' 'Cyan'
 $catalog = Get-Content (Join-Path $root 'catalog/catalog.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-$state = Initialize-TuiState -Catalog $catalog -Preset 'balanced' -Language 'en'
+$state = Initialize-TuiState -Catalog $catalog -Language 'en'
 $null = Enable-TuiAnsi
 Enter-TuiScreen
 $last = $null

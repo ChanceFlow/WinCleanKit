@@ -22,29 +22,30 @@ actually touch?" before you commit to anything:
 
 ```text
 +--------------------------------------------------------------------------------------------+
-| WinCleanKit v0.1.0   preset [balanced]   plan: 60 actions                                  |
+| WinCleanKit v0.1.0   plan: 45 actions                                                      |
 | highest risk: medium                                                                       |
 +--------------------------------------------------------------------------------------------+
-+----------------------------------+---------------------------------------------------------+
-|-  20/22  Ads & suggestions       |  [x] Forbid silent app installation                     |
-|   21/21  Telemetry & diagnostics |  [x] Disable subscribed content (recommendations/ads)   |
-|   11/19  Preinstalled apps       |> [x] Disable Windows Spotlight desktop ad               |
-|    0/1   OneDrive                |  [x] Disable lock screen ad overlay                     |
-|    7/10  Privacy                 |  [ ] Disable lock screen Spotlight rotation             |
-|    1/1   Ad cache & wallpaper    |  [x] Disable Settings / Start suggestions               |
-|                                  |                                                         |
-|                                  |                                                         |
-|                                  |Disable Windows Spotlight desktop ad   [low]             |
-|                                  |Subscribed content 338389 is the desktop wallpaper/icon …|
-|                                  |Touches: HKCU\Software\Microsoft\Windows\CurrentVersion\…|
-|                                  |                                                         |
-|                                  |                                                         |
-|                                  |                                                         |
-|                                  |                                                         |
-|                                  |                                                         |
-+----------------------------------+---------------------------------------------------------+
-| up/down move  Tab pane  Enter toggle  1/2/3 preset  ? help  x apply  q quit                |
-| space toggles  .  p previews  .  x applies                                                 |
++---------------------------------------+----------------------------------------------------+
+|-  20/22  Ads & suggestions            |> [x] Forbid silent app installation                |
+|  17/21  Telemetry & diagnostics       | [x] Disable subscribed content (recommendations/ad…|
+|   0/19  Preinstalled apps             | [x] Disable Windows Spotlight desktop ad           |
+|   0/1   OneDrive                      | [x] Disable lock screen ad overlay                 |
+|   7/10  Privacy                       | [ ] Disable lock screen Spotlight rotation         |
+|   1/1   Ad cache & wallpaper          | [x] Disable Settings / Start suggestions           |
+|                                       | [x] Disable content delivery                       |
+|                                       | [x] Disable OEM preinstalled app promotions        |
+|                                       | [x] Disable soft landing / welcome pages           |
++ details · action ---------------------+ [x] Remove Start menu Recommended section ads      |
+|Forbid silent app installation   [low] | [x] Disable recent-file suggestions                |
+|Stops ContentDeliveryManager silently d| [x] Hide taskbar Widgets button                    |
+|ownloading and pinning sponsored apps (| [x] Hide taskbar Chat (Teams) button               |
+|e.g. TikTok, games) into your Start me…| [x] Hide desktop 'Learn about this picture' icon   |
+|Touches: HKCU\Software\Microsoft\Window| [x] Disable search box web suggestions             |
+|s\CurrentVersion\ContentDeliveryManage…| [ ] Hide Settings home page promos                 |
+|                                       | [x] Disable Edge promotional tabs & recommendations|
++---------------------------------------+----------------------------------------------------+
+| up/down move  Tab pane  Enter toggle  ? help  x apply  q quit                              |
+| space to toggle, p to preview, x to apply; nothing changes until you confirm               |
 +--------------------------------------------------------------------------------------------+
 ```
 
@@ -54,7 +55,6 @@ actually touch?" before you commit to anything:
 | `Tab` | switch between the category pane and the action pane |
 | `Enter` | open a category; in the action pane, toggle and step down |
 | `space` | toggle the current action |
-| `1` `2` `3` | preset: conservative / balanced / aggressive |
 | `a` / `n` | select / clear every action in the category |
 | `A` / `N` | select / clear everything |
 | `l` | switch interface language (English / Chinese) |
@@ -68,7 +68,6 @@ engine's own plan renderer, and applying hands the chosen ids back to the engine
    ------------------------------------------------------------------
    WinCleanKit 0.1.0
    ------------------------------------------------------------------
-   Preset   : aggressive
    Selected : 74 action(s)
    Mode     : PREVIEW ONLY
 
@@ -106,7 +105,7 @@ WinCleanKit is built the other way round:
 
 | Principle | What it means in practice |
 |---|---|
-| **You decide** | Three presets, then per-category and per-item toggles. Nothing runs that you did not select. |
+| **You decide** | The basics are on to start with; everything else is one toggle away. Nothing runs that you did not select. |
 | **You see it first** | Every action carries a plain-language *why*, a risk level, and a preview step. |
 | **You can always go back** | Each run writes a timestamped backup plus a self-contained restore script to your Desktop. |
 | **Already-downloaded images are images, not settings** | It deletes ad images but refuses to touch your wallpaper. |
@@ -120,7 +119,7 @@ WinCleanKit is built the other way round:
 1.  Download or clone this repository
 2.  Double-click  run.bat
 3.  Accept the elevation prompt        (machine-level changes need admin)
-4.  Pick a preset, read the plan, then type APPLY
+4.  Read the plan, adjust the checkboxes, then type APPLY
 ```
 
 Nothing is written until you type `APPLY` at the final confirmation, and the first
@@ -133,15 +132,22 @@ thing a run does is write a rollback point to your Desktop.
 Prefer the command line? `src\WinCleanKit.ps1` is the whole engine and takes the same
 decisions as flags — see [Command line](#command-line).
 
-### The three presets
+### What is on by default
 
-| Preset | Actions | What it does | Risk |
-|---|---|---|---|
-| `conservative` | 45 | Ads, suggestions and the safest telemetry switches. No visible behaviour change beyond the ads disappearing. | low/medium |
-| `balanced` | 60 | Everything above, plus error-reporting and compatibility-assistant services, and the clearly unneeded bundled apps. | low/medium |
-| `aggressive` | 74 | Everything above, plus items with a real trade-off: Game Bar overlay, OneDrive, location, settings sync, the new Outlook, Phone Link. | up to high |
+There is no tier to choose before you start. The catalog marks **45 of the 74
+actions** as the default set — the low-trade-off ones, where the worst case is a
+promotion or a background collector going away — and the interface opens with
+exactly those checked. Everything else is opt-in:
 
-`conservative ⊂ balanced ⊂ aggressive` is enforced by the test suite, so a smaller preset never contains something a larger one does not.
+| | Actions | What it covers |
+|---|---|---|
+| **On at start** | 45 | Ads and suggestions, the safest telemetry switches, the privacy preferences. No visible behaviour change beyond the ads disappearing. |
+| **Opt-in** | 29 | Error-reporting and compatibility services, the bundled consumer apps, and the items with a real trade-off: Game Bar overlay, OneDrive, location, settings sync, the new Outlook, Phone Link. |
+
+Nothing is ever added back. Turning an action off leaves it off, and turning one on
+is a single `space` — there is no tier to re-apply that would undo either. The split
+is enforced by `tests/Test-Catalog.ps1`, which also asserts that no high-risk action
+is on by default.
 
 ---
 
@@ -153,27 +159,27 @@ The `.bat` is a front-end for `src\WinCleanKit.ps1`. The engine works fine on it
 # Show everything the catalog knows, as JSON
 .\src\WinCleanKit.ps1 -ListCatalog
 
-# Preview a preset (changes nothing)
-.\src\WinCleanKit.ps1 -Plan -Preset balanced
+# Preview the default selection (changes nothing)
+.\src\WinCleanKit.ps1 -Plan
 
 # Preview exactly two actions, in Chinese
-.\src\WinCleanKit.ps1 -Plan -Preset conservative -Only 'ads.cdm.silent-install,apps.maps' -Language zh
+.\src\WinCleanKit.ps1 -Plan -Only 'ads.cdm.silent-install,apps.maps' -Language zh
 
 # Apply a whole category unattended
-.\src\WinCleanKit.ps1 -Apply -NoPrompt -Preset aggressive -Only telemetry
+.\src\WinCleanKit.ps1 -Apply -NoPrompt -Only telemetry
 
 # Apply a hand-picked list from a file (one id per line, '#' comments allowed)
 .\src\WinCleanKit.ps1 -Apply -NoPrompt -FromFile .\my-selection.txt
 
-# Apply a preset minus a few things you disagree with
-.\src\WinCleanKit.ps1 -Apply -NoPrompt -Preset balanced -Skip 'apps.xbox,apps.outlook-new'
+# Apply the default selection minus a few things you disagree with
+.\src\WinCleanKit.ps1 -Apply -NoPrompt -Skip 'apps.xbox,apps.outlook-new'
 
 # See and use restore points
 .\src\WinCleanKit.ps1 -ListRestores
 .\src\WinCleanKit.ps1 -Restore WinCleanKit-20260913-004942
 ```
 
-`-Only` is **authoritative**: when you pass it, the selection is exactly what you asked for. The preset becomes a label. This is what makes per-item deselection work reliably.
+`-Only` is **authoritative**: when you pass it, the selection is exactly what you asked for and the default set contributes nothing. This is what makes per-item deselection work reliably.
 
 Full parameter reference: [docs/USAGE.md](docs/USAGE.md).
 
@@ -274,7 +280,7 @@ colour roles, so the front-end and the engine read as one product.
 
 ## Contributing
 
-Adding an action is usually a small JSON change. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first — it explains the risk levels, the preset rules, and what a good `why` string looks like.
+Adding an action is usually a small JSON change. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first — it explains the risk levels, the default-selection rule, and what a good `why` string looks like.
 
 ```powershell
 # Syntax gate: the PowerShell parser plus the file-encoding rules

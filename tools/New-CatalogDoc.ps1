@@ -39,12 +39,6 @@ $riskLabel = @{
     medium = '🟡 medium / 中'
     high   = '🔴 high / 高'
 }
-$presetDesc = @{
-    conservative = 'only the lowest-trade-off options / 仅取舍最小的项目'
-    balanced     = 'conservative plus everything above / 上一档全部'
-    aggressive   = 'balanced plus everything above (all actions) / 上一档全部（即全部动作）'
-}
-
 $L = New-Object System.Collections.Generic.List[string]
 function Add-Line([string]$Text = '') { [void]$L.Add($Text) }
 
@@ -60,10 +54,10 @@ Add-Line '# Action catalog'
 Add-Line ''
 Add-Line ('**{0} actions across {1} categories.** Generated from [`catalog/catalog.json`](../catalog/catalog.json).' -f $cat.actions.Count, $cat.categories.Count)
 Add-Line ''
-Add-Line 'Every action appears below with its English and Chinese text, its risk level, and the'
-Add-Line 'preset(s) it belongs to. The containment chain `conservative ⊆ balanced ⊆ aggressive` is'
-Add-Line 'enforced by `tests/Test-Catalog.ps1`, so a smaller preset never contains something a larger'
-Add-Line 'one does not.'
+Add-Line 'Every action appears below with its English and Chinese text, its risk level, and'
+Add-Line 'whether it is part of the default selection. `default` marks the small, low-trade-off'
+Add-Line 'set the tool checks when it starts; everything else is opt-in and nothing re-adds an'
+Add-Line 'action you have turned off.'
 Add-Line ''
 Add-Line '## Risk levels'
 Add-Line ''
@@ -71,16 +65,13 @@ Add-Line '| Level | Meaning |'
 Add-Line '|---|---|'
 Add-Line '| 🟢 **low / 低** | Reversible preference or a background collector that stops, with no visible change to daily use. |'
 Add-Line '| 🟡 **medium / 中** | A visible trade-off: a UI element disappears, a convenience feature stops working, or cached content is deleted. |'
-Add-Line '| 🔴 **high / 高** | Removes a program or blocks a capability. Always opt-in, never in a smaller preset. |'
+Add-Line '| 🔴 **high / 高** | Removes a program or blocks a capability. Never part of the default selection. |'
 Add-Line ''
-Add-Line '## Presets'
+$defaultCount = @($cat.actions | Where-Object { $_.default }).Count
+Add-Line '## Default selection'
 Add-Line ''
-Add-Line '| Preset | Actions | Contains |'
-Add-Line '|---|---|---|'
-foreach ($p in 'conservative', 'balanced', 'aggressive') {
-    $n = @($cat.actions | Where-Object { $_.presets -contains $p }).Count
-    Add-Line ('| `{0}` | {1} | {2} |' -f $p, $n, $presetDesc[$p])
-}
+Add-Line ('**{0} of {1} actions** are selected when the tool starts. The rest are opt-in: turn on' -f $defaultCount, $cat.actions.Count)
+Add-Line 'whatever you actually want, and nothing puts back something you turned off.'
 Add-Line ''
 
 foreach ($c in $cat.categories) {
@@ -98,8 +89,8 @@ foreach ($c in $cat.categories) {
         Add-Line ''
         Add-Line ('**{0}**' -f $a.title_zh)
         Add-Line ''
-        $presets = ($a.presets | ForEach-Object { '`' + $_ + '`' }) -join ', '
-        Add-Line ('- **Risk / 风险:** {0}  ·  **Target / 类型:** `{1}`  ·  **Presets:** {2}' -f $riskLabel[$a.risk], $a.target, $presets)
+        $isDefault = if ($a.default) { 'yes / 是' } else { 'no / 否' }
+        Add-Line ('- **Risk / 风险:** {0}  ·  **Target / 类型:** `{1}`  ·  **Default / 默认:** {2}' -f $riskLabel[$a.risk], $a.target, $isDefault)
         Add-Line ('- **Why / 为什么:** {0}' -f $a.why)
         Add-Line ('- **代价 / Cost:** {0}' -f $a.why_zh)
 

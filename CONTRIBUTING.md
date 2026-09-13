@@ -35,7 +35,7 @@ Append an object to `actions` in `catalog/catalog.json`.
 | `risk` | `low` · `medium` · `high` — see below. |
 | `title` / `title_zh` | Imperative and specific. "Disable X", not "Optimise X". |
 | `why` / `why_zh` | **One sentence saying what it does and what it costs.** This is the user's only basis for deciding. A weak `why` is a broken action. |
-| `presets` | Array from `conservative`, `balanced`, `aggressive`. |
+| `default` | `true` only for the low-trade-off actions that are selected when the tool starts. Anything that uninstalls software, or carries a visible trade-off, must be `false`. |
 
 ### Risk levels
 
@@ -70,8 +70,8 @@ The test suite rejects a pull request that breaks any of these:
 
 1. `id` values are unique.
 2. Every `category` reference resolves.
-3. Every action has both languages and at least one preset.
-4. `conservative ⊆ balanced ⊆ aggressive`. If you add an action to a small preset, it must also be in every larger one.
+3. Every action has both languages and a `default` flag.
+4. No high-risk action and nothing that uninstalls software is `default: true`.
 5. No action targets the `hosts` file.
 6. No action disables an update or core diagnostic service (`wuauserv`, `UsoSvc`, `BITS`, `DoSvc`, `DPS`).
 7. No action deletes `TranscodedWallpaper` or the wallpaper cache.
@@ -83,7 +83,7 @@ Requirement 6 and 7 exist because breaking Windows Update or a user's wallpaper 
 The engine has one job: execute the catalog and record what it did. Useful invariants to preserve:
 
 - **Preview is the default.** No change happens without `-Apply`.
-- **`-Only` is authoritative.** When it is present, the preset is a label. Making it additive breaks per-item deselection in the UI.
+- **`-Only` is authoritative.** When it is present the default set contributes nothing. Making it additive breaks per-item deselection in the UI.
 - **A dry run touches nothing on disk** — no log directory, no backup folder.
 - **Every write is verified by reading back.** Some Windows keys accept and silently drop a write; those must be reported, not assumed successful.
 - **Never force ownership of a protected key.** Report the refusal.
@@ -136,7 +136,7 @@ bidirectional linking, switcher placement, and the absence of private addresses.
 - One logical change per pull request.
 - Write the commit subject as an imperative sentence: `Add action to disable location services`.
 - Say which Windows build you tested on, and what you observed.
-- If your change alters what a preset does, call it out — that affects users who never read the changelog.
+- If your change alters the `default` set, call it out. That changes what runs for users who never open the catalog.
 
 ## Reporting a bug
 

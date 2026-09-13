@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Adding an action is usually a small JSON change. This form collects what is
-        needed to judge whether it belongs, and in which preset.
+        needed to judge whether it belongs, and whether it is safe to enable by default.
   - type: input
     id: what
     attributes:

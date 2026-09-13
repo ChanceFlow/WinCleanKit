@@ -21,7 +21,6 @@
 param(
     [Parameter(Mandatory)][ValidateSet('main', 'cat', 'items', 'sel', 'summary', 'cats')]
     [string] $Mode,
-    [string] $Preset   = 'balanced',
     [string] $Lang     = 'en',
     [string] $PlusFile = '',
     [string] $MinusFile = '',
@@ -63,11 +62,11 @@ function Read-IdFile([string]$Path) {
 $plus  = Read-IdFile $PlusFile
 $minus = Read-IdFile $MinusFile
 
-# --- Effective selection: preset, then +plus, then -minus --------------------
+# --- Effective selection: the catalog's default set, then +plus, then -minus --
 $effective = [ordered]@{}
 foreach ($a in $catalog.actions) {
-    $inPreset = ($a.PSObject.Properties.Name -contains 'presets' -and $a.presets -and ($a.presets -contains $Preset))
-    if ($inPreset) { $effective[$a.id] = $true }
+    $isDefault = ($a.PSObject.Properties.Name -contains 'default' -and [bool]$a.default)
+    if ($isDefault) { $effective[$a.id] = $true }
 }
 foreach ($id in $plus.Keys)  { $effective[$id] = $true }
 foreach ($id in $minus.Keys) { if ($effective.Contains($id)) { $effective.Remove($id) } }

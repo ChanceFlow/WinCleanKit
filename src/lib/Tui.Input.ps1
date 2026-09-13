@@ -156,11 +156,12 @@ function Show-TuiPlan {
       duplicating the presentation. The TUI is suspended while it prints.
     #>
     [CmdletBinding()]
-    param($Plan, [string]$Language, $Engine, [string]$Preset = 'balanced')
+    param($Plan, [string]$Language, $Engine)
     try {
-        # $Engine is a path, so invoke it explicitly as a script file.
+        # $Engine is a path, so invoke it explicitly as a script file. -Only carries
+        # the exact selection, so the preview shows precisely what is on screen.
         & powershell -NoProfile -ExecutionPolicy Bypass -File $Engine `
-            -Plan -NoPrompt -Preset $Preset -Only $Plan -Language $Language
+            -Plan -NoPrompt -Only $Plan -Language $Language
     } catch {
         Write-Host ("  preview failed: " + $_.Exception.Message) -ForegroundColor Red
     }
@@ -183,7 +184,6 @@ function Show-TuiInteraction {
     )
 
     $state = $EngineState
-    $preset = $state.Preset
     $size = Get-TuiSize
     $lastFrame = ''
     $dirty = $true
@@ -253,7 +253,7 @@ function Show-TuiInteraction {
                     'p' {
                         $plan = Get-TuiPlan $state
                         if ($plan.Count -eq 0) { $state.Message = if ($state.Language -eq 'zh') { '没有选中任何项目' } else { 'nothing selected' } }
-                        else { Show-TuiPlan -Plan $plan -Language $state.Language -Engine $Engine -Preset $state.Preset; $lastFrame = '' }
+                        else { Show-TuiPlan -Plan $plan -Language $state.Language -Engine $Engine; $lastFrame = '' }
                     }
                     'x' {
                         $plan = Get-TuiPlan $state
@@ -261,13 +261,9 @@ function Show-TuiInteraction {
                             $state.Message = if ($state.Language -eq 'zh') { '没有选中任何项目' } else { 'nothing selected' }
                         } else {
                             $result = $plan
-                            $preset = $state.Preset
-                            return @{ Plan = $result; Preset = $preset; Language = $state.Language }
+                            return @{ Plan = $result; Language = $state.Language }
                         }
                     }
-                    '1' { $state = Select-TuiPreset -State $state -Preset 'conservative' }
-                    '2' { $state = Select-TuiPreset -State $state -Preset 'balanced' }
-                    '3' { $state = Select-TuiPreset -State $state -Preset 'aggressive' }
                     'a' { $state = Switch-TuiGroupSelection -State $state -Selected $true }
                     'n' { $state = Switch-TuiGroupSelection -State $state -Selected $false }
                     'A' { $state = Switch-TuiAllSelection -State $state -Selected $true }
@@ -316,7 +312,6 @@ function Show-TuiSession {
     param(
         [Parameter(Mandatory)] $Catalog,
         [Parameter(Mandatory)] [string]$Engine,
-        [string]$Preset = 'balanced',
         [string]$Language = 'en'
     )
 
@@ -336,7 +331,7 @@ function Show-TuiSession {
     }
 
     $script:TuiOutcome = 0
-    $state = Initialize-TuiState -Catalog $Catalog -Preset $Preset -Language $Language
+    $state = Initialize-TuiState -Catalog $Catalog -Language $Language
     Enter-TuiScreen
     try {
         return Show-TuiInteraction -EngineState $state -Engine $Engine

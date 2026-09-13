@@ -1,5 +1,5 @@
 {
-  "$comment": "WinCleanKit action catalog. Every entry is data, not code. `id` must be unique and stable (used by -Only/-Skip and by restore logs). `risk` is described in docs/CATALOG.md.",
+  "$comment": "WinCleanKit action catalog. Every entry is data, not code. `id` must be unique and stable (used by -Only/-Skip and by restore logs). `default` marks the small set that is selected when the tool starts; everything else is opt-in. `risk` is described in docs/CATALOG.md.",
   "schema": 1,
   "categories": [
     {
@@ -66,11 +66,7 @@
       "name": "SilentInstalledAppsEnabled",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.cdm.subscribed-content",
@@ -86,11 +82,7 @@
       "name": "SubscribedContentEnabled",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.cdm.spotlight-desktop",
@@ -106,11 +98,7 @@
       "name": "338389",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.cdm.lockscreen-overlay",
@@ -126,11 +114,7 @@
       "name": "RotatingLockScreenOverlayEnabled",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.cdm.lockscreen-spotlight",
@@ -146,9 +130,7 @@
       "name": "RotatingLockScreenEnabled",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "ads.cdm.system-pane-suggestions",
@@ -164,11 +146,7 @@
       "name": "SystemPaneSuggestionsEnabled",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.cdm.content-delivery",
@@ -184,11 +162,7 @@
       "name": "ContentDeliveryAllowed",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.cdm.oem-preinstalled",
@@ -204,11 +178,7 @@
       "name": "OemPreInstalledAppsEnabled",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.cdm.soft-landing",
@@ -224,11 +194,7 @@
       "name": "SoftLandingEnabled",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.start.iris-recommendations",
@@ -244,11 +210,7 @@
       "name": "Start_IrisRecommendations",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.start.track-docs",
@@ -264,11 +226,7 @@
       "name": "Start_TrackDocs",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.taskbar.widgets-button",
@@ -284,11 +242,7 @@
       "name": "TaskbarDa",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.taskbar.chat-button",
@@ -304,11 +258,7 @@
       "name": "TaskbarMn",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.desktop.learn-about-picture",
@@ -324,11 +274,7 @@
       "name": "{2cc5ca98-6485-489a-920e-b3e88a6ccce3}",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.search.box-suggestions",
@@ -344,11 +290,7 @@
       "name": "DisableSearchBoxSuggestions",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.settings.hide-home-promos",
@@ -364,9 +306,7 @@
       "name": "SettingsPageVisibility",
       "type": "String",
       "value": "hide:home",
-      "presets": [
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "ads.edge.promo-tabs",
@@ -382,11 +322,7 @@
       "name": "PromotionalTabsEnabled",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.edge.default-browser-popup",
@@ -402,11 +338,7 @@
       "name": "DefaultBrowserSettingEnabled",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.cloudcontent.consumer-features",
@@ -422,11 +354,7 @@
       "name": "DisableWindowsConsumerFeatures",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.cloudcontent.spotlight-features",
@@ -442,11 +370,7 @@
       "name": "DisableWindowsSpotlightFeatures",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.cloudcontent.third-party-suggestions",
@@ -462,11 +386,7 @@
       "name": "DisableThirdPartySuggestions",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "ads.cloudcontent.tailored-experiences",
@@ -482,11 +402,7 @@
       "name": "DisableTailoredExperiencesWithDiagnosticData",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.policy.allow-telemetry",
@@ -502,11 +418,7 @@
       "name": "AllowTelemetry",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.policy.allow-telemetry-legacy",
@@ -522,11 +434,7 @@
       "name": "AllowTelemetry",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.policy.one-settings",
@@ -542,11 +450,7 @@
       "name": "DisableOneSettingsDownloads",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.policy.no-feedback-prompts",
@@ -562,11 +466,7 @@
       "name": "DoNotShowFeedbackNotifications",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.appcompat.ait",
@@ -582,11 +482,7 @@
       "name": "AITEnable",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.appcompat.inventory",
@@ -602,11 +498,7 @@
       "name": "DisableInventory",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.appcompat.uar",
@@ -622,11 +514,7 @@
       "name": "DisableUAR",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.ceip",
@@ -642,11 +530,7 @@
       "name": "CEIPEnable",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.wer.disabled",
@@ -662,10 +546,7 @@
       "name": "Disabled",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "telemetry.svc.diagtrack",
@@ -678,11 +559,7 @@
       "why_zh": "“已连接用户体验和遥测”核心服务（Connected User Experiences and Telemetry）。Windows 最主要的遥测后台守护进程，负责打包上传各种数据并常驻占用内存与磁盘 I/O。禁用后立竿见影降低系统闲置开销。",
       "name": "DiagTrack",
       "startType": "Disabled",
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.svc.dmwappushservice",
@@ -695,11 +572,7 @@
       "why_zh": "设备管理 WAP 推送消息路由服务。主要为 Windows 遥测管道和移动设备管理提供后台路由通道。对于普通家庭或办公 PC 毫无用处，禁用可减少后台端口侦听与唤醒。",
       "name": "dmwappushservice",
       "startType": "Disabled",
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.svc.wdi",
@@ -712,11 +585,7 @@
       "why_zh": "Windows 诊断基础结构服务主机（WdiServiceHost）。用于在后台运行诊断方案、跟踪性能问题。如果你不需要系统在后台自动收集系统性能瓶颈日志，可以安全禁用。",
       "name": "WdiServiceHost",
       "startType": "Disabled",
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.svc.wdi-system",
@@ -729,11 +598,7 @@
       "why_zh": "诊断系统宿主服务（WdiSystemHost）。与 WdiServiceHost 协同，以 SYSTEM 权限执行系统级故障诊断与数据记录。禁用后进一步降低系统日志开销。",
       "name": "WdiSystemHost",
       "startType": "Disabled",
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.svc.wer",
@@ -746,10 +611,7 @@
       "why_zh": "禁用 Windows 错误报告系统服务（WerSvc）。负责在程序崩溃或系统出现问题时启动收集与报告流程。代价：禁用后遇到程序崩溃不会弹出“正在查找解决方案”窗口，也不会生成错误上报日志。",
       "name": "WerSvc",
       "startType": "Disabled",
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "telemetry.svc.pcasvc",
@@ -762,10 +624,7 @@
       "why_zh": "程序兼容性助手服务（PcaSvc）。监视旧程序的运行状况，并在检测到可能不兼容时弹出提示并上报数据。代价：老旧过时软件初次安装时可能不会自动弹出“以推荐设置重新安装”向导。现代软件完全不受影响。",
       "name": "PcaSvc",
       "startType": "Disabled",
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "telemetry.task.appraiser",
@@ -778,11 +637,7 @@
       "why_zh": "兼容性评估计划任务（Microsoft Compatibility Appraiser）。Windows 系统中唤醒最频繁、CPU/磁盘占用最高的遥测任务之一，常在开机或空闲时导致磁盘占用 100%。禁用后显著改善老机型卡顿。",
       "path": "\\Microsoft\\Windows\\Application Experience\\",
       "name": "Microsoft Compatibility Appraiser Exp",
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.task.consolidator",
@@ -795,11 +650,7 @@
       "why_zh": "客户体验改善计划数据汇总计划任务（Consolidator）。每天定期唤醒，将收集到的使用习惯、性能指标打包压缩准备发送。禁用后消除每日定时后台唤醒。",
       "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\",
       "name": "Consolidator",
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.task.usbceip",
@@ -812,11 +663,7 @@
       "why_zh": "通用串行总线（USB）使用数据收集任务。记录并上传你插拔 USB 设备（U盘、移动硬盘、键盘鼠标）的硬件 ID 与工作频率。禁用后保障外部存储和外设的连接隐私。",
       "path": "\\Microsoft\\Windows\\Customer Experience Improvement Program\\",
       "name": "UsbCeip",
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.task.dmclient",
@@ -829,11 +676,7 @@
       "why_zh": "反馈与场景下载计划任务（DmClient 与 DmClientOnScenarioDownload）。负责检查并上传反馈数据及下载远程诊断场景。个人设备不需要此上传通道。",
       "path": "\\Microsoft\\Windows\\Feedback\\Siuf\\",
       "name": "DmClient",
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "telemetry.task.marebackup",
@@ -846,10 +689,7 @@
       "why_zh": "微软应用程序遥测备份任务（Microsoft Application Repository Exp Backup）。负责在应用更新后备份并上报兼容性评估状态。禁用无副作用。",
       "path": "\\Microsoft\\Windows\\Application Experience\\",
       "name": "MareBackup",
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "telemetry.task.queuereporting",
@@ -862,11 +702,7 @@
       "why_zh": "错误报告队列发送任务（QueueReporting）。负责将离线时产生的错误报告在后台排队，一旦检测到联网便尝试静默上传。禁用可彻底断开错误报告的重试通道。",
       "path": "\\Microsoft\\Windows\\Windows Error Reporting\\",
       "name": "QueueReporting",
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "privacy.advertising-id",
@@ -882,11 +718,7 @@
       "name": "Enabled",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "privacy.input-personalization",
@@ -902,11 +734,7 @@
       "name": "Enabled",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "privacy.implicit-text-collection",
@@ -922,11 +750,7 @@
       "name": "RestrictImplicitTextCollection",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "privacy.implicit-ink-collection",
@@ -942,11 +766,7 @@
       "name": "RestrictImplicitInkCollection",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "privacy.handwriting-sharing",
@@ -962,11 +782,7 @@
       "name": "PreventHandwritingDataSharing",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "privacy.location",
@@ -982,9 +798,7 @@
       "name": "DisableLocation",
       "type": "DWord",
       "value": 1,
-      "presets": [
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "privacy.settings-sync",
@@ -1000,9 +814,7 @@
       "name": "SyncPolicy",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "privacy.app-diagnostic-access",
@@ -1018,11 +830,7 @@
       "name": "LetAppsAccessDiagnosticInformation",
       "type": "DWord",
       "value": 2,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "privacy.feedback-frequency",
@@ -1038,11 +846,7 @@
       "name": "NumberOfSIUFInPeriod",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     },
     {
       "id": "privacy.delivery-optimization-no-p2p",
@@ -1058,9 +862,7 @@
       "name": "DODownloadMode",
       "type": "DWord",
       "value": 0,
-      "presets": [
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.clipchamp",
@@ -1072,10 +874,7 @@
       "why": "Bundled video editor with upsell subscriptions and export paywalls. If you use CapCut, DaVinci, or Premiere, uninstalling is safe. Can be reinstalled from the Microsoft Store anytime.",
       "why_zh": "微软收购并预装的轻量级视频剪辑工具。内置大量付费模板与导出限制订阅。如果你习惯使用剪映、PR、达芬奇等专业工具，可放心卸载；需要时可随时在微软商店免费下回。",
       "name": "Clipchamp.Clipchamp",
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.devhome",
@@ -1087,10 +886,7 @@
       "why": "Developer dashboard preinstalled on Windows 11 featuring GitHub widgets and system monitors. Unnecessary for general users and safe to remove.",
       "why_zh": "面向开发者的 Windows 开发人员主页（Dev Home）。集成了 GitHub 小组件与开发环境监测工具。对于非开发者而言纯属后台占位常驻，卸载不会对日常使用造成任何影响。",
       "name": "Microsoft.Windows.DevHome",
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.power-automate",
@@ -1102,10 +898,7 @@
       "why": "Low-code desktop workflow automation tool with background agent services. Safely removable for users who do not run automated desktop scripts.",
       "why_zh": "微软的低代码自动化桌面流程工具。在后台注册了常驻自动化代理服务。普通用户几乎用不到，卸载可释放系统空间并消除后台服务开销。",
       "name": "Microsoft.PowerAutomateDesktop",
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.outlook-new",
@@ -1117,9 +910,7 @@
       "why": "Web-wrapper version of Outlook pushed to replace Windows Mail. Contains banner ads and lacks offline PST support. Trade-off: skip if this is your primary email client.",
       "why_zh": "Windows 11 强推的新版 Outlook。本质上是基于 Web 技术的网页套壳应用，界面内嵌广告且无法本地离线缓存 PST/OST 文件。取舍：如果你以此为日常邮箱客户端，请取消勾选。",
       "name": "Microsoft.OutlookForWindows",
-      "presets": [
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.media-player",
@@ -1131,9 +922,7 @@
       "why": "Modern Media Player (successor to Groove Music) with Store media hooks. Trade-off: skip if you use it for local playback; recommended to remove if using PotPlayer or VLC.",
       "why_zh": "系统新版媒体播放器（原 Groove 音乐）。界面包含商店音乐推荐与引流。取舍：如果你平时用它播放本地音乐或视频请保留；如已安装 PotPlayer、VLC 等第三方播放器则推荐卸载。",
       "name": "Microsoft.ZuneMusic",
-      "presets": [
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.xbox",
@@ -1145,9 +934,7 @@
       "why": "Xbox gaming hub, companion app, and identity providers. Trade-off: skip if you subscribe to PC Game Pass, play Xbox Store games, or track achievements. Safe to remove for non-gamers.",
       "why_zh": "Xbox 游戏生态核心应用，包含好友列表、游戏库、Xbox 社交服务与身份提供程序。取舍：如果你订阅了 PC Game Pass、需要在电脑上玩 Xbox 游戏或同步 Xbox 成就，请跳过此项！普通非玩家可安全卸载。",
       "name": "Microsoft.GamingApp",
-      "presets": [
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.xbox-overlay",
@@ -1159,9 +946,7 @@
       "why": "Xbox Game Bar TCUI overlay UI invoked with Win+G. Trade-off: skip if you use Win+G to capture gameplay clips, monitor FPS, or record screens.",
       "why_zh": "Xbox Game Bar 浮层外壳组件（TCUI）。就是游戏中按 Win+G 弹出的半透明游戏栏。取舍：如果你经常使用 Win+G 快捷键截屏、录屏或监控显卡帧率，请跳过此项；否则可直接卸载。",
       "name": "Microsoft.XboxGamingOverlay",
-      "presets": [
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.solitaire",
@@ -1173,10 +958,7 @@
       "why": "Microsoft Solitaire Collection, now heavily monetized with full-screen video ads and premium subscriptions. Cleanly removable and reinstallable from the Store.",
       "why_zh": "微软纸牌集合（Microsoft Solitaire Collection）。原本经典的休闲游戏现已被微软植入大量全屏视频广告和月费去广告内购。卸载可净化系统，想玩时可随时在微软商店重新安装。",
       "name": "Microsoft.MicrosoftSolitaireCollection",
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.office-hub",
@@ -1188,10 +970,7 @@
       "why": "Microsoft 365 promotional hub and Store placeholder. Not the real Office suite; exists only to promote subscriptions and redirect to Office Online.",
       "why_zh": "“Microsoft 365 / Office”应用占位符。这并不是真正的 Word、Excel 办公套件，而是一个纯粹引导你购买订阅并跳转网页版 Office 的宣传入口。卸载对你本地已安装的 Office 毫无影响。",
       "name": "Microsoft.MicrosoftOfficeHub",
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.todos",
@@ -1203,9 +982,7 @@
       "why": "Microsoft To Do task management app. Trade-off: skip if you sync tasks with Microsoft accounts; safe to remove if using Notion, TickTick, or pen and paper.",
       "why_zh": "微软 Microsoft To Do 待办任务清单应用。取舍：如果你正在使用微软待办来同步日常任务与日程，请跳过；如果你使用滴答清单、Notion 或不用待办应用，可放心卸载。",
       "name": "Microsoft.Todos",
-      "presets": [
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.feedback-hub",
@@ -1217,10 +994,7 @@
       "why": "Windows Feedback Hub used to submit system telemetry and bug tickets. Unnecessary for users who just want a stable, uninterrupted workstation.",
       "why_zh": "Windows 反馈中心（Feedback Hub）。用于提交系统建议和 bug 报告。对于绝大多数只希望稳定使用系统、不想做微软“志愿测试员”的用户而言完全没有用处，卸载无害。",
       "name": "Microsoft.WindowsFeedbackHub",
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.get-help",
@@ -1232,10 +1006,7 @@
       "why": "The 'Get Help' troubleshooter app. Primarily serves generic virtual agent responses and support article links; safe to remove.",
       "why_zh": "“获取帮助”诊断应用。点击常见设置问题时系统常调起此应用，但其给出的多数是通用的 AI 回复或知识库网页链接。卸载不会影响 Windows 正常使用。",
       "name": "Microsoft.GetHelp",
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.your-phone",
@@ -1247,9 +1018,7 @@
       "why": "Phone Link app for syncing Android and iOS text messages, calls, and notifications. Trade-off: skip if you use cross-device phone integration.",
       "why_zh": "“手机连接”应用（Phone Link）。用于在电脑上同步安卓/苹果手机的通知、短信和照片。取舍：如果你经常在电脑上接打电话或看手机通知，请保留；如果不喜欢电脑连手机，可彻底卸载。",
       "name": "Microsoft.YourPhone",
-      "presets": [
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.quick-assist",
@@ -1261,9 +1030,7 @@
       "why": "Quick Assist remote desktop assistance tool using 6-digit session codes. Trade-off: skip if your corporate IT or family members use it to help you remotely.",
       "why_zh": "“快速助手”远程桌面协助工具。允许通过 6 位安全代码进行远程桌面共享和技术支持。取舍：如果你的企业 IT 或家人常通过此功能远程协助你修电脑，请跳过；否则可安全卸载。",
       "name": "MicrosoftCorporationII.QuickAssist",
-      "presets": [
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.sticky-notes",
@@ -1275,9 +1042,7 @@
       "why": "Sticky Notes desktop note-taking app. Trade-off: skip if you pin sticky notes to your desktop; safe to remove if using third-party note apps.",
       "why_zh": "桌面“便笺”应用。取舍：如果你习惯在 Windows 桌面上贴彩色便签记录临时备忘，请跳过此项；如果已有更专业的笔记工具，可安全卸载。",
       "name": "Microsoft.MicrosoftStickyNotes",
-      "presets": [
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.maps",
@@ -1289,10 +1054,7 @@
       "why": "Offline desktop Windows Maps application. Rarely used on desktop PCs compared to web navigation; safe to uninstall.",
       "why_zh": "Windows 内置离线地图应用。在台式机和笔记本上极少有人打开，且数据更新滞后。卸载后如需查地图可随时在浏览器使用网页版或手机高德/百度地图。",
       "name": "Microsoft.WindowsMaps",
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.bing-news",
@@ -1304,10 +1066,7 @@
       "why": "Microsoft Bing News app. Contains clickbait feeds and ad placements; commonly bundled silently. Safe to remove.",
       "why_zh": "微软必应资讯应用。充斥娱乐八卦、算法推荐与广告赞助新闻，常常随系统更新被静默安装。卸载可杜绝低质新闻弹窗骚扰。",
       "name": "Microsoft.BingNews",
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.bing-weather",
@@ -1319,10 +1078,7 @@
       "why": "Microsoft Bing Weather application with embedded ads and Bing links. Safe to uninstall if you check weather via your phone or browser.",
       "why_zh": "微软必应天气应用。界面充斥必应推广与资讯卡片。取舍：如果你不依赖该 UWP 查看天气预报，推荐卸载净化系统。",
       "name": "Microsoft.BingWeather",
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "apps.bing-search",
@@ -1334,10 +1090,7 @@
       "why": "Bing search web wrapper app that redirects local desktop queries into Bing services. Safe to remove without affecting native local search.",
       "why_zh": "微软必应桌面搜索套壳应用。用于将桌面搜索请求强制引流到必应生态，卸载后不影响浏览器和系统本地文件搜索。",
       "name": "Microsoft.BingSearch",
-      "presets": [
-        "balanced",
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "onedrive.uninstall",
@@ -1348,9 +1101,7 @@
       "title_zh": "移除 OneDrive 客户端并阻止重装",
       "why": "Uninstalls the background OneDrive sync client, removes the pinned OneDrive tree item from File Explorer, and applies the DisableFileSyncNGSC policy to block automated re-deployment. Your files remain untouched on disk.",
       "why_zh": "删除系统常驻的 OneDrive 同步客户端本体，清理资源管理器左侧导航栏的 OneDrive 固钉图标，并通过组策略设置 DisableFileSyncNGSC 彻底阻止系统在更新后再次自动下载重装。你的本地文件原封不动保存在原位置。",
-      "presets": [
-        "aggressive"
-      ]
+      "default": false
     },
     {
       "id": "cache.spotlight-images",
@@ -1367,11 +1118,7 @@
         "%LOCALAPPDATA%\\Packages\\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\\LocalState\\TargetedContentCache",
         "%LOCALAPPDATA%\\Packages\\Microsoft.Windows.ContentDeliveryManager_cw5n1h2txyewy\\LocalState\\Tips"
       ],
-      "presets": [
-        "conservative",
-        "balanced",
-        "aggressive"
-      ]
+      "default": true
     }
   ]
 }

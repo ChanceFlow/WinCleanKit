@@ -63,7 +63,7 @@ Write-Head 'frame geometry, both languages, several sizes'
 foreach ($lang in 'en', 'zh') {
     foreach ($size in @(@(80, 24), @(100, 30), @(120, 40), @(60, 18))) {
         $w = $size[0]; $h = $size[1]
-        $st = Initialize-TuiState -Catalog $cat -Preset 'balanced' -Language $lang
+        $st = Initialize-TuiState -Catalog $cat -Language $lang
         $frame = Get-TuiFrame -State $st -Width $w -Height $h
         $bad = @($frame | Where-Object { (Get-WidthOf $_) -ne $w })
         Check "every line is $w wide ($lang)" ($bad.Count -eq 0) ("{0} bad of {1}" -f $bad.Count, $frame.Count)
@@ -76,7 +76,7 @@ foreach ($lang in 'en', 'zh') {
 
 # ---------------------------------------------------------------------------
 Write-Head 'borders line up between panes'
-$st = Initialize-TuiState -Catalog $cat -Preset 'balanced' -Language 'en'
+$st = Initialize-TuiState -Catalog $cat -Language 'en'
 $frame = Get-TuiFrame -State $st -Width 100 -Height 30
 $sep = @($frame | Where-Object { $_ -match '^\+-+\+-+\+$' })
 Check 'pane separator rows exist' ($sep.Count -ge 2) ("{0} separators" -f $sep.Count)
@@ -85,11 +85,12 @@ Check 'all separator rows share one width' ($sepWidths.Count -eq 1) ($sepWidths 
 
 # ---------------------------------------------------------------------------
 Write-Head 'content reflects the selection'
-$st = Initialize-TuiState -Catalog $cat -Preset 'conservative' -Language 'en'
+$st = Initialize-TuiState -Catalog $cat -Language 'en'
 $n = Get-TuiSelectedCount $st
 $frame = Get-TuiFrame -State $st -Width 110 -Height 32
 Check 'header shows the selected count' ((@($frame | Where-Object { $_ -match "plan: $n actions" }).Count) -eq 1) "looking for $n"
-Check 'header shows the preset' ((@($frame | Where-Object { $_ -match 'preset \[conservative\]' }).Count) -eq 1)
+# The header must not claim a tier any more: there is nothing to switch between.
+Check 'header carries no preset' ((@($frame | Where-Object { $_ -match 'preset|预设' }).Count) -eq 0) 'the concept is gone'
 $st = Switch-TuiAllSelection -State $st -Selected $false
 $frame = Get-TuiFrame -State $st -Width 110 -Height 32
 Check 'clearing updates the count' ((@($frame | Where-Object { $_ -match 'plan: 0 actions' }).Count) -eq 1)
@@ -97,7 +98,7 @@ Check 'clearing drops the risk to none' ((@($frame | Where-Object { $_ -match 'h
 
 # ---------------------------------------------------------------------------
 Write-Head 'the detail panel describes the focused action'
-$st = Initialize-TuiState -Catalog $cat -Preset 'aggressive' -Language 'en'
+$st = Initialize-TuiState -Catalog $cat -Language 'en'
 $st.ListIndex = 0
 $st.DetailIndex = 0
 $st.Pane = 'detail'; $st.Mode = 'detail'
@@ -111,7 +112,7 @@ Check 'detail shows the target' $hasTarget ("target=" + $focus.target)
 
 # When the category list is focused on the left, the detail panel shows the
 # category's overview rather than jumping straight to a specific action.
-$stCat = Initialize-TuiState -Catalog $cat -Preset 'aggressive' -Language 'en'
+$stCat = Initialize-TuiState -Catalog $cat -Language 'en'
 $stCat.ListIndex = 0
 $stCat.Pane = 'list'; $stCat.Mode = 'list'
 $frameCat = Get-TuiFrame -State $stCat -Width 120 -Height 34
@@ -140,7 +141,7 @@ function Get-DetailPanelRow {
 }
 $lw = Get-LeftWidth 100
 foreach ($pane in 'list', 'detail') {
-    $st = Initialize-TuiState -Catalog $cat -Preset 'balanced' -Language 'en'
+    $st = Initialize-TuiState -Catalog $cat -Language 'en'
     $st.Pane = $pane; $st.Mode = $pane
     $f = Get-TuiFrame -State $st -Width 100 -Height 30
     $marks = @()
@@ -162,7 +163,7 @@ Write-Head 'the detail panel never moves'
 # everything inside the panel - stays where the eye last found it.
 $rows = @()
 foreach ($case in @(@(0, 0), @(0, 20), @(1, 0), @(2, 0))) {
-    $st = Initialize-TuiState -Catalog $cat -Preset 'balanced' -Language 'en'
+    $st = Initialize-TuiState -Catalog $cat -Language 'en'
     $st.ListIndex = $case[0]; $st.DetailIndex = $case[1]
     $f = Get-TuiFrame -State $st -Width 100 -Height 30
     $rows += (Get-DetailPanelRow $f $lw)
@@ -185,7 +186,7 @@ $w4 = Get-TuiWrap -Text ('汉' * 40) -Width 21 -Max 5
 Check 'cjk wrap respects the width' ((@($w4 | Where-Object { (Get-WidthOf $_) -gt 21 }).Count) -eq 0) (($w4 | ForEach-Object { Get-WidthOf $_ }) -join ',')
 
 # The rationale must actually reach the screen: no blank rows below a cut sentence.
-$st = Initialize-TuiState -Catalog $cat -Preset 'aggressive' -Language 'en'
+$st = Initialize-TuiState -Catalog $cat -Language 'en'
 $st.ListIndex = 0; $st.DetailIndex = 0
 $st.Pane = 'detail'; $st.Mode = 'detail'
 $f = Get-TuiFrame -State $st -Width 120 -Height 34
@@ -221,7 +222,7 @@ Check 'the action column carries on across the divider' ($dividerRow -ge 0 -and 
 
 # ---------------------------------------------------------------------------
 Write-Head 'checkbox state is visible per row'
-$st = Initialize-TuiState -Catalog $cat -Preset 'conservative' -Language 'en'
+$st = Initialize-TuiState -Catalog $cat -Language 'en'
 $st.ListIndex = 0; $st.DetailIndex = 0; $st.Pane = 'detail'; $st.Mode = 'detail'
 $first = (Get-TuiGroupAction $st)[0]
 $frameOn = (Get-TuiFrame -State $st -Width 120 -Height 34) -join "`n"
@@ -232,7 +233,7 @@ Check 'deselected row shows [ ]' ($frameOff.Contains('[ ] ' + $first.title)) $fi
 
 # ---------------------------------------------------------------------------
 Write-Head 'the opening language chooser'
-$ask = Initialize-TuiState -Catalog $cat -Preset 'balanced' -Language 'ask'
+$ask = Initialize-TuiState -Catalog $cat -Language 'ask'
 foreach ($size in @(@(80, 24), @(100, 30), @(120, 40), @(60, 18))) {
     $w = $size[0]; $h = $size[1]
     $f = Get-TuiFrame -State $ask -Width $w -Height $h
@@ -269,7 +270,7 @@ foreach ($lang in 'en', 'zh') {
 
 # ---------------------------------------------------------------------------
 Write-Head 'frame is stable and side-effect free'
-$st = Initialize-TuiState -Catalog $cat -Preset 'balanced' -Language 'en'
+$st = Initialize-TuiState -Catalog $cat -Language 'en'
 $a = (Get-TuiFrame -State $st -Width 100 -Height 30) -join "`n"
 $b = (Get-TuiFrame -State $st -Width 100 -Height 30) -join "`n"
 Check 'same state yields the same frame' ($a -eq $b) 'deterministic'

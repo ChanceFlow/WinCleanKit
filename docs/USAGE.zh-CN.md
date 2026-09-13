@@ -59,12 +59,16 @@ run.bat --en
 
 | 选项 | 含义 |
 |---|---|
-| `-Preset conservative\|balanced\|aggressive` | 起点。默认 `balanced`。 |
 | `-Only <ids 或分类>` | **权威**选择。支持分类 id、精确动作 id、`prefix.*`、逗号分隔的多个。 |
-| `-Skip <ids 或分类>` | 从预设或 `-Only` 的结果里剔除。永远优先。 |
+| `-Skip <ids 或分类>` | 从默认集或 `-Only` 的结果里剔除。永远优先。 |
 | `-FromFile <路径>` | 每行一个动作 id。空行与 `#` 注释会被忽略。并入 `-Only`。 |
 
-最关键的一条规则：**只要出现 `-Only`，预设就只是个标签。** 选中集合就是你列出的那些。这正是「逐项取消勾选」能可靠生效的原因 —— 否则预设会把它悄悄加回来。
+一个选项都不给时，引擎执行 catalog 里的**默认集** —— 也就是标了 `default` 的那 45 项，
+都是取舍最小的：广告与推荐、最安全的遥测开关、隐私偏好。其余全部是选装，而且
+**任何"卸载软件"的动作都绝不在默认集里**。
+
+最关键的一条规则：**只要出现 `-Only`，默认集就完全不参与。** 选中集合就是你列出的那些。
+这正是「逐项取消勾选」能可靠生效的原因 —— 否则默认集会把它悄悄加回来。
 
 ```powershell
 # 整个分类
@@ -76,8 +80,8 @@ run.bat --en
 # 精确 id，混用通配符
 .\src\WinCleanKit.ps1 -Apply -NoPrompt -Only 'ads.cdm.silent-install,apps.maps,privacy.*'
 
-# 用预设，但剔除你不同意的几项
-.\src\WinCleanKit.ps1 -Apply -NoPrompt -Preset aggressive -Skip 'apps.xbox,apps.outlook-new,onedrive.uninstall'
+# 用默认集，但剔除你不同意的几项
+.\src\WinCleanKit.ps1 -Apply -NoPrompt -Skip 'ads.taskbar.widgets-button,telemetry.ceip'
 
 # 从文件读取手挑清单
 .\src\WinCleanKit.ps1 -Apply -NoPrompt -FromFile .\my-selection.txt
@@ -106,13 +110,13 @@ run.bat --en
 
 ```powershell
 # 先看清楚
-.\src\WinCleanKit.ps1 -Plan -Preset conservative -Language zh
+.\src\WinCleanKit.ps1 -Plan -Language zh
 
-# 新机器上无人值守
-.\src\WinCleanKit.ps1 -Apply -NoPrompt -Preset balanced
+# 新机器上无人值守：默认集，不询问
+.\src\WinCleanKit.ps1 -Apply -NoPrompt
 
 # CI / 批量运维：失败就报错，并保留备份路径
-$r = .\src\WinCleanKit.ps1 -Apply -NoPrompt -Preset balanced -Skip 'apps.todos' -EmitJson | ConvertFrom-Json
+$r = .\src\WinCleanKit.ps1 -Apply -NoPrompt -Skip 'telemetry.ceip' -EmitJson | ConvertFrom-Json
 if ($r.failed -gt 0) { throw "清理出现 $($r.failed) 个失败: $($r.failures -join '; ')" }
 Write-Host "备份: $($r.journal)"
 
@@ -150,4 +154,4 @@ $last = Get-ChildItem "$env:USERPROFILE\Desktop\WinCleanKit-*" -Directory | Sort
 
 ## 添加你自己的动作
 
-一切都是数据。要新增一个动作，编辑 [`catalog/catalog.json`](../catalog/catalog.json)，然后运行 `tests/Test-Catalog.ps1`。schema 与预设规则见 [CONTRIBUTING.md](../CONTRIBUTING.md)。
+一切都是数据。要新增一个动作，编辑 [`catalog/catalog.json`](../catalog/catalog.json)，然后运行 `tests/Test-Catalog.ps1`。schema 与默认集规则见 [CONTRIBUTING.md](../CONTRIBUTING.md)。

@@ -6,7 +6,8 @@
     This is a data-driven executor. It never hardcodes what to change: every
     action is read from catalog/catalog.json. Its jobs are:
 
-      1. Resolve a plan from the catalog + user selection (presets, -Only, -Skip).
+      1. Resolve a plan from the catalog + user selection (-Only / -Skip), starting
+         from the catalog's own default set.
       2. Show the plan so the user can see exactly what would happen.
       3. Execute it, recording the original state so everything can be undone.
       4. Write a self-contained restore script next to the log.
@@ -26,12 +27,10 @@
 .PARAMETER DryRun
     With -Apply, execute nothing but report what would be done.
 
-.PARAMETER Preset
-    conservative | balanced | aggressive. Anything outside the preset can be
-    added with -Only, removed with -Skip.
-
 .PARAMETER Only
-    Action ids or category ids to include (wildcards allowed, e.g. 'ads.*').
+    Action ids or category ids to add to the default selection (wildcards allowed,
+    e.g. 'ads.*'). Given -Only, it is authoritative: the default set no longer
+    contributes anything, so a caller can pass an exact list.
 
 .PARAMETER Skip
     Action ids or category ids to exclude. Wins over -Only.
@@ -62,8 +61,6 @@ param(
     [switch]   $Plan,
     [switch]   $Apply,
     [switch]   $DryRun,
-    [ValidateSet('conservative', 'balanced', 'aggressive')]
-    [string]   $Preset = 'balanced',
     [string[]] $Only = @(),
     [string[]] $Skip = @(),
     [string]   $FromFile = '',
@@ -76,8 +73,6 @@ param(
     [switch]   $Version,
     [switch]   $Tui,
     [switch]   $NoTui,
-    [ValidateSet('conservative', 'balanced', 'aggressive')]
-    [string]   $TuiPreset = 'balanced',
     # 'ask' opens the TUI on its language chooser, which is the only way to offer
     # the choice without already knowing which language the reader can read.
     [ValidateSet('en', 'zh', 'ask')]
@@ -341,21 +336,21 @@ function Test-IdMatch {
 }
 
 function Resolve-Plan {
-    param($Catalog, [string]$PresetName, [string[]]$OnlyList, [string[]]$SkipList)
+    <#
+      The plan the tool starts from: every action the catalog marks `default`, minus
+      -Skip. -Only replaces that starting set outright rather than adding to it, so a
+      caller (the front-end, or a script) can hand over an exact list and have a
+      deselected item stay deselected.
+    #>
+    param($Catalog, [string[]]$OnlyList, [string[]]$SkipList)
 
     $selected = New-Object System.Collections.Generic.List[object]
 
     foreach ($a in $Catalog.actions) {
         if ($OnlyList.Count -gt 0) {
-            # -Only is authoritative: the caller has already resolved the exact set.
-            # This is how the .bat front-end sends per-item choices. -Preset is then
-            # only a label. Without this, deselecting one item would be silently
-            # undone by the preset re-adding it.
             $include = (Test-IdMatch -Id $a.id -Category $a.category -Patterns $OnlyList)
         } else {
-            $include = ($a.PSObject.Properties.Name -contains 'presets' -and
-                        $a.presets -and
-                        ($a.presets -contains $PresetName))
+            $include = ($a.PSObject.Properties.Name -contains 'default' -and [bool]$a.default)
         }
         if (Test-IdMatch -Id $a.id -Category $a.category -Patterns $SkipList) { $include = $false }
 
@@ -425,7 +420,7 @@ function Show-Plan {
 # Restore journal
 # --------------------------------------------------------------------------
 function Initialize-Journal {
-    param([string]$PresetName, $Actions)
+    param($Actions)
     $desktop = [Environment]::GetFolderPath('Desktop')
     if (-not $desktop) { $desktop = $env:USERPROFILE }
     $dir = Join-Path $desktop ("WinCleanKit-{0}" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
@@ -437,7 +432,6 @@ function Initialize-Journal {
         Backup   = Join-Path $dir 'backup.json'
         Restore  = Join-Path $dir 'Restore-WinCleanKit.ps1'
         Records  = (New-Object System.Collections.ArrayList)
-        Preset   = $PresetName
         Started  = (Get-Date)
         Actions  = $Actions.Count
     }
@@ -767,10 +761,10 @@ function Open-InteractiveSession {
       full-screen interface, so the caller can degrade instead of crashing.
     #>
     [CmdletBinding()]
-    param([string]$TuiPreset)
+    param()
 
     $result = Show-TuiSession -Catalog (Get-Catalog) -Engine $PSCommandPath `
-                         -Preset $TuiPreset -Language $TuiLanguage
+                         -Language $TuiLanguage
 
     if (-not $result) { return $null }
     return $result
@@ -810,7 +804,7 @@ try {
     # result to the same resolution/execution path as every other mode rather than
     # duplicating preview, apply or backup logic.
     if ($Tui -and -not $NoTui) {
-        $tuiPlan = Open-InteractiveSession -TuiPreset $TuiPreset
+        $tuiPlan = Open-InteractiveSession
         if (-not $tuiPlan) {
             if ($TuiExitCode) {
                 # 3 means "this console cannot draw the TUI"; the front-end then
@@ -821,7 +815,6 @@ try {
             return
         }
         $Only = @($tuiPlan)
-        $Preset = $TuiPreset
         $Language = $TuiLanguage
     }
 
@@ -840,7 +833,7 @@ try {
         else { $Only = @($Only) + $fromFileIds }
     }
 
-    $actions = Resolve-Plan -Catalog $catalog -PresetName $Preset -OnlyList $Only -SkipList $Skip
+    $actions = Resolve-Plan -Catalog $catalog -OnlyList $Only -SkipList $Skip
 
     if ($actions.Count -eq 0) {
         Write-Warn2 "Nothing selected — the resolved plan is empty."
@@ -848,7 +841,6 @@ try {
     }
 
     Write-Head "WinCleanKit $script:EngineVersion"
-    Write-Info ("Preset   : {0}" -f $Preset)
     Write-Info ("Selected : {0} action(s)" -f $actions.Count)
     Write-Info ("Mode     : {0}" -f $(if ($Apply -and -not $DryRun) { 'APPLY' } else { 'PREVIEW ONLY' }))
     Show-Plan -Catalog $catalog -Actions $actions
@@ -865,7 +857,7 @@ try {
         if ($answer -ne 'APPLY') { Write-Warn2 "Cancelled."; return }
     }
 
-    $journal = Initialize-Journal -PresetName $Preset -Actions $actions
+    $journal = Initialize-Journal -Actions $actions
     Write-Host ''
     Write-Head $(if ($DryRun) { 'Dry run' } else { 'Applying changes' })
     if ($DryRun) {

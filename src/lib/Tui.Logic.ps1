@@ -8,7 +8,6 @@
 
       * navigation   (move the cursor, change mode, switch pane)
       * selection    (toggle an action, a category, or the whole catalog)
-      * presets      (switch preset and re-resolve the selection)
       * layout math  (scroll windows, truncation, progress)
 
     No console API is touched in this file. That is deliberate: it is the reason
@@ -20,7 +19,6 @@
 
         Catalog   object[]  actions from catalog.json
         Groups    object[]  one entry per category: id, name, zh, count
-        Preset    string    conservative | balanced | aggressive
         Selected  hashtable id -> $true for every selected action
         Mode      string    list | detail | help
         ListIndex int       cursor in the category pane
@@ -36,41 +34,20 @@
 
 Set-StrictMode -Version 2.0
 
-$script:PresetOrder = @('conservative', 'balanced', 'aggressive')
-
-function Get-PresetList {
+function Select-Default {
     <#
-      The presets in escalation order, which is the order they must be shown in:
-      a user should always read them from safest to most invasive.
+      The selection the interface opens with: the actions the catalog marks
+      `default`. It mirrors the engine's own starting set exactly, so the screen
+      and an unattended run agree on what "the basics" means.
+
+      Everything else is opt-in, which is the whole point: there is no tier to pick
+      first, and nothing re-adds an action the user has turned off.
     #>
     [CmdletBinding()]
-    param()
-    , $script:PresetOrder
-}
-
-function Get-PresetRank {
-    <#
-      Position of a preset in the escalation order, or -1 when unknown.
-    #>
-    [CmdletBinding()]
-    param([string]$Preset)
-    for ($i = 0; $i -lt $script:PresetOrder.Count; $i++) {
-        if ($script:PresetOrder[$i] -eq $Preset) { return $i }
-    }
-    return -1
-}
-
-function Select-Preset {
-    <#
-      Resolve a preset into the selection map. This mirrors the engine's own
-      resolution: a preset is the set of actions that name it.
-    #>
-    [CmdletBinding()]
-    param($Catalog, [string]$Preset)
-
+    param($Catalog)
     $selected = @{}
     foreach ($a in $Catalog.actions) {
-        if ($a.PSObject.Properties.Name -contains 'presets' -and $a.presets -and ($a.presets -contains $Preset)) {
+        if ($a.PSObject.Properties.Name -contains 'default' -and [bool]$a.default) {
             $selected[$a.id] = $true
         }
     }
@@ -87,7 +64,7 @@ function Initialize-TuiState {
       'en' underneath it purely so every field is populated.
     #>
     [CmdletBinding()]
-    param($Catalog, [string]$Preset = 'balanced', [string]$Language = 'en')
+    param($Catalog, [string]$Language = 'en')
 
     $ask = ($Language -eq 'ask')
     $lang = if ($ask) { 'en' } else { $Language }
@@ -107,8 +84,7 @@ function Initialize-TuiState {
     return @{
         Catalog     = $Catalog
         Groups      = $groups
-        Preset      = $Preset
-        Selected    = (Select-Preset -Catalog $Catalog -Preset $Preset)
+        Selected    = (Select-Default -Catalog $Catalog)
         Mode        = $(if ($ask) { 'language' } else { 'list' })
         ListIndex   = 0
         DetailIndex = 0
@@ -273,20 +249,6 @@ function Select-TuiMode {
     return $State
 }
 
-function Select-TuiPreset {
-    <#
-      Switch preset. The selection is replaced wholesale, because a preset is a
-      starting point, not an additive layer. Anything the user had customised is
-      deliberately discarded, and the caller is expected to say so.
-    #>
-    [CmdletBinding()]
-    param($State, [string]$Preset)
-    if ((Get-PresetRank $Preset) -lt 0) { return $State }
-    $State.Preset = $Preset
-    $State.Selected = Select-Preset -Catalog $State.Catalog -Preset $Preset
-    return $State
-}
-
 function Select-TuiLanguage {
     <#
       Switch language. Group labels are derived from the catalog, so they have to
@@ -295,7 +257,7 @@ function Select-TuiLanguage {
     [CmdletBinding()]
     param($State, [string]$Language)
     if ($Language -notin @('en', 'zh')) { return $State }
-    $rebuilt = Initialize-TuiState -Catalog $State.Catalog -Preset $State.Preset -Language $Language
+    $rebuilt = Initialize-TuiState -Catalog $State.Catalog -Language $Language
     $rebuilt.Selected    = $State.Selected
     $rebuilt.ListIndex   = [Math]::Min($State.ListIndex, [Math]::Max(0, $rebuilt.Groups.Count - 1))
     $rebuilt.DetailIndex = $State.DetailIndex

@@ -86,6 +86,15 @@ All notable changes to this project are documented here. The format follows
   counts, and the reasoning behind each excluded rule.
 
 ### Changed
+- **Presets are gone.** There were three tiers to choose between before you could do
+  anything, and a tier is a decision made on your behalf: picking `balanced` silently
+  opted you into 15 actions you never looked at. The catalog now marks one starting set
+  instead — the 45 low-trade-off actions that used to be `conservative` — and the tool
+  opens with exactly those checked. Everything else is a single `space` away, nothing
+  re-adds an action you turned off, and the `1` / `2` / `3` keys, the header label, the
+  per-action preset line and the `-Preset` switch are all gone rather than hidden.
+  `-Only` still replaces the starting set outright, so per-item deselection keeps
+  working.
 - **The action column is now only the action list, and the detail text moved to a
   panel under the categories.** The list runs the full height of the body — 21 rows
   at 100x30, where the old 55% split gave it 15 — and nothing about it changes shape

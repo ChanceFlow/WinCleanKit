@@ -63,12 +63,18 @@ An unrecognised value falls back to the chooser rather than guessing.
 
 | Option | Meaning |
 |---|---|
-| `-Preset conservative\|balanced\|aggressive` | Starting point. Default `balanced`. |
 | `-Only <ids or categories>` | **Authoritative** selection. Accepts category ids, exact action ids, `prefix.*`, and comma-separated bundles. |
-| `-Skip <ids or categories>` | Remove from whatever the preset or `-Only` selected. Always wins. |
+| `-Skip <ids or categories>` | Remove from the default selection, or from `-Only`. Always wins. |
 | `-FromFile <path>` | One action id per line. Blank lines and `#` comments are ignored. Merged into `-Only`. |
 
-The rule that matters: **when `-Only` is present, the preset is only a label.** The selection is exactly what you listed. This is what makes deselecting a single item reliable — otherwise the preset would silently add it back.
+With no selection option at all, the engine runs the catalog's **default set** — the 45
+actions marked `default`, which are the low-trade-off ones: ads and suggestions, the
+safest telemetry switches, and the privacy preferences. Everything else is opt-in, and
+nothing that uninstalls software is ever on by default.
+
+The rule that matters: **when `-Only` is present, the default set contributes nothing.**
+The selection is exactly what you listed. This is what makes deselecting a single item
+reliable — otherwise the default set would silently add it back.
 
 ```powershell
 # A whole category
@@ -80,8 +86,8 @@ The rule that matters: **when `-Only` is present, the preset is only a label.** 
 # Exact ids, mixed with a wildcard
 .\src\WinCleanKit.ps1 -Apply -NoPrompt -Only 'ads.cdm.silent-install,apps.maps,privacy.*'
 
-# Start from a preset but drop what you disagree with
-.\src\WinCleanKit.ps1 -Apply -NoPrompt -Preset aggressive -Skip 'apps.xbox,apps.outlook-new,onedrive.uninstall'
+# Start from the default set but drop what you disagree with
+.\src\WinCleanKit.ps1 -Apply -NoPrompt -Skip 'ads.taskbar.widgets-button,telemetry.ceip'
 
 # Hand-picked list
 .\src\WinCleanKit.ps1 -Apply -NoPrompt -FromFile .\my-selection.txt
@@ -110,13 +116,13 @@ The rule that matters: **when `-Only` is present, the preset is only a label.** 
 
 ```powershell
 # Look before you leap
-.\src\WinCleanKit.ps1 -Plan -Preset conservative -Language zh
+.\src\WinCleanKit.ps1 -Plan -Language zh
 
-# Unattended on a fresh machine
-.\src\WinCleanKit.ps1 -Apply -NoPrompt -Preset balanced
+# Unattended on a fresh machine: the default set, no prompting
+.\src\WinCleanKit.ps1 -Apply -NoPrompt
 
 # CI / fleet use: fail loudly and keep the backup path
-$r = .\src\WinCleanKit.ps1 -Apply -NoPrompt -Preset balanced -Skip 'apps.todos' -EmitJson | ConvertFrom-Json
+$r = .\src\WinCleanKit.ps1 -Apply -NoPrompt -Skip 'telemetry.ceip' -EmitJson | ConvertFrom-Json
 if ($r.failed -gt 0) { throw "debloat had $($r.failed) failures: $($r.failures -join '; ')" }
 Write-Host "backup: $($r.journal)"
 
@@ -154,4 +160,4 @@ A `[FAIL]` for a single action does not abort the run; it is recorded as protect
 
 ## Adding your own actions
 
-Everything is data. To add an action, edit [`catalog/catalog.json`](../catalog/catalog.json) and run `tests/Test-Catalog.ps1`. See [CONTRIBUTING.md](../CONTRIBUTING.md) for the schema and the preset rules.
+Everything is data. To add an action, edit [`catalog/catalog.json`](../catalog/catalog.json) and run `tests/Test-Catalog.ps1`. See [CONTRIBUTING.md](../CONTRIBUTING.md) for the schema and the default-selection rule.

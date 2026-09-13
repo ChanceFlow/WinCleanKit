@@ -19,9 +19,9 @@
 
 <!-- Action ids, e.g. `ads.cdm.silent-install`. Use "n/a" for code-only changes. -->
 
-## Does this change what a preset does?
+## Does this change the default selection?
 
-<!-- If yes, say which preset and what users will now get or lose. This matters
+<!-- If yes, say what users will now get or lose by default. This matters
      to people who never read the changelog. -->
 
 - [ ] No
@@ -42,6 +42,6 @@
 
 - [ ] Every new action documents what it does **and what it costs**, in both languages
 - [ ] New ids follow `category.specific-name` and do not rename an existing id
-- [ ] The preset containment chain still holds (`conservative ⊆ balanced ⊆ aggressive`)
+- [ ] Any new action is `default: false` unless it is low-trade-off, and nothing that uninstalls software is on by default
 - [ ] No action touches the `hosts` file, Windows Update, the wallpaper, or user data
 - [ ] `docs/CATALOG.md` regenerated if actions changed

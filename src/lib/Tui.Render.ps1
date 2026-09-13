@@ -11,17 +11,18 @@
     Frame layout (width x height, minimum 60x18):
 
         +----------------------------------------------------------------+
-        | WinCleanKit  v0.1.0   preset [balanced]   plan: 60 actions     |  header
-        | highest risk: medium                              EN | zh      |
-        +--------------------------+-------------------------------------+
-        | > 22/22 系统广告与推荐    | [ ] 禁止静默自动安装应用             |  body
-        |   0/21  遥测与诊断数据    |                                     |
-        |   ...                    | Why: ...                            |
-        |                          | Cost: ...                           |
-        |                          | Sets: HKCU\...\SilentInstall...     |
-        +--------------------------+-------------------------------------+
-        | up/down move  space toggle  ...                                |  keys
-        | [ok] preset balanced applied                                   |  status
+        | WinCleanKit  v0.1.0   45 of 74 selected                |  header
+        | highest risk: medium                                          |
+        +--------------------------------+-----------------------------+
+        | > 20/22 系统广告与推荐          | [ ] 禁止静默自动安装应用     |  body
+        |   21/21 遥测与诊断数据          |                             |
+        |   ...                          |                             |
+        + 详情 · 分类 -------------------+  (the action list continues) |
+        | [分类] 系统广告与推荐   [低]    |                             |
+        | 全面关闭 Windows 11 各处的...   |                             |
+        +--------------------------------+-----------------------------+
+        | up/down move  space toggle  ...                              |  keys
+        | [ok] previewed 60 actions                                    |  status
         +----------------------------------------------------------------+
 
 .NOTES
@@ -162,11 +163,11 @@ function Get-TuiKeyHelp {
     [CmdletBinding()]
     param([string]$Language, [int]$Width)
     if ($Language -eq 'zh') {
-        $full  = '上下移动  Tab切换面板  Enter进入/勾选  空格勾选  a全选 n全不选  1/2/3预设  l语言  ?帮助  p预览  x执行  q退出'
-        $short = '上下移动  Tab面板  Enter勾选  1/2/3预设  ?帮助  x执行  q退出'
+        $full  = '上下移动  Tab切换面板  Enter进入/勾选  空格勾选  a全选 n全不选  l语言  ?帮助  p预览  x执行  q退出'
+        $short = '上下移动  Tab面板  Enter勾选  ?帮助  x执行  q退出'
     } else {
-        $full  = 'up/down move  Tab pane  Enter enter/toggle  space toggle  a all  n none  1/2/3 preset  l lang  ? help  p preview  x apply  q quit'
-        $short = 'up/down move  Tab pane  Enter toggle  1/2/3 preset  ? help  x apply  q quit'
+        $full  = 'up/down move  Tab pane  Enter enter/toggle  space toggle  a all  n none  l lang  ? help  p preview  x apply  q quit'
+        $short = 'up/down move  Tab pane  Enter toggle  ? help  x apply  q quit'
     }
     if ($Width -ge (Get-TuiWidth $full)) { return $full }
     return $short
@@ -194,7 +195,6 @@ function Get-TuiFrame {
 
     # ---- header -----------------------------------------------------------
     $title = if ($zh) { 'WinCleanKit' } else { 'WinCleanKit' }
-    $presetLabel = if ($zh) { '预设' } else { 'preset' }
     $planLabel   = if ($zh) { '计划' } else { 'plan' }
     $riskNames   = if ($zh) { @('无', '低', '中', '高') } else { @('none', 'low', 'medium', 'high') }
     $risk = Get-TuiHighestRisk $State
@@ -204,7 +204,7 @@ function Get-TuiFrame {
     $planText = "{0}: {1} {2}" -f $planLabel, $count, $(if ($zh) { '项' } else { 'actions' })
 
     [void]$lines.Add('+' + ('-' * $inner) + '+')
-    $row1 = " {0} v{1}   {2} [{3}]   {4}" -f $title, $Version, $presetLabel, $State.Preset, $planText
+    $row1 = " {0} v{1}   {2}" -f $title, $Version, $planText
     $row2 = " {0}" -f $riskText
     [void]$lines.Add('|' + (Format-TuiCell $row1 $inner) + '|')
     [void]$lines.Add('|' + (Format-TuiCell $row2 $inner) + '|')
@@ -340,23 +340,18 @@ function Get-TuiBody {
         }
     } else {
         # When browsing actions on the right: show the focused action's title,
-        # presets membership, rationale, and concrete touches.
+        # rationale, and the concrete thing it touches.
         $cur = Get-TuiActionAt $State
         if ($cur) {
             $targetLabel = if ($zh) { '触及: ' } else { 'Touches: ' }
             $title = "{0}   [{1}]" -f (Get-TuiText -Object $cur -Base 'title' -Language $State.Language), $riskNames[$cur.risk]
             $titleLines = Get-TuiWrap -Text $title -Width $LeftWidth -Max 2
 
-            $presetMap = if ($zh) { @{ conservative = '保守'; balanced = '均衡'; aggressive = '激进' } } else { @{ conservative = 'conservative'; balanced = 'balanced'; aggressive = 'aggressive' } }
-            $presetText = ($cur.presets | ForEach-Object { if ($presetMap.ContainsKey($_)) { $presetMap[$_] } else { $_ } }) -join ', '
-            $presetLine = if ($zh) { "预设: {0}" -f $presetText } else { "Presets: {0}" -f $presetText }
-
-            $rest = [Math]::Max(2, $rows - $titleLines.Count - 1)
+            $rest = [Math]::Max(2, $rows - $titleLines.Count)
             $whyRows = [Math]::Max(1, [int][Math]::Ceiling($rest / 2))
             $tgtRows = [Math]::Max(1, $rest - $whyRows)
 
             foreach ($x in $titleLines) { [void]$detailLines.Add($x) }
-            [void]$detailLines.Add($presetLine)
             foreach ($x in (Get-TuiWrap -Text (Get-TuiText -Object $cur -Base 'why' -Language $State.Language) -Width $LeftWidth -Max $whyRows)) { [void]$detailLines.Add($x) }
             foreach ($x in (Get-TuiWrap -Text ("{0}{1}" -f $targetLabel, (Get-TuiTargetLine -Action $cur)) -Width $LeftWidth -Max $tgtRows)) { [void]$detailLines.Add($x) }
         }
@@ -413,7 +408,6 @@ function Get-TuiHelpBody {
             @('Tab',        '在分类面板与动作面板之间切换'),
             @('Enter',      '进入分类；在动作面板中勾选并下移'),
             @('空格',       '勾选 / 取消当前动作'),
-            @('1 2 3',      '切换预设 conservative / balanced / aggressive'),
             @('a / n',      '选中 / 取消当前分类全部'),
             @('A / N',      '选中 / 取消全部动作'),
             @('l',          '切换界面语言'),
@@ -428,7 +422,6 @@ function Get-TuiHelpBody {
             @('Tab',       'switch between the category pane and the action pane'),
             @('Enter',     'enter a category; in the action pane, toggle and move down'),
             @('space',     'toggle the current action'),
-            @('1 2 3',     'switch preset: conservative / balanced / aggressive'),
             @('a / n',     'select / clear every action in the current category'),
             @('A / N',     'select / clear every action in the catalog'),
             @('l',         'switch interface language'),

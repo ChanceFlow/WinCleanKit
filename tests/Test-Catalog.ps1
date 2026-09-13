@@ -65,7 +65,6 @@ Write-Host ''
 Write-Host '--- required fields ---' -ForegroundColor Cyan
 $validTargets = 'registry', 'service', 'task', 'appx', 'path-clean', 'onedrive'
 $validRisk = 'low', 'medium', 'high'
-$validPresets = 'conservative', 'balanced', 'aggressive'
 $fieldErrors = New-Object System.Collections.Generic.List[string]
 foreach ($a in $cat.actions) {
     foreach ($f in 'id', 'category', 'target', 'risk', 'title', 'title_zh', 'why', 'why_zh') {
@@ -75,10 +74,7 @@ foreach ($a in $cat.actions) {
     }
     if ($validTargets -notcontains $a.target) { $fieldErrors.Add("$($a.id): bad target '$($a.target)'") }
     if ($validRisk -notcontains $a.risk) { $fieldErrors.Add("$($a.id): bad risk '$($a.risk)'") }
-    if (-not $a.presets -or $a.presets.Count -eq 0) { $fieldErrors.Add("$($a.id): no preset") }
-    foreach ($p in $a.presets) {
-        if ($validPresets -notcontains $p) { $fieldErrors.Add("$($a.id): bad preset '$p'") }
-    }
+    if (-not ($a.PSObject.Properties.Name -contains 'default')) { $fieldErrors.Add("$($a.id): no default flag") }
     # target-specific required fields
     switch ($a.target) {
         'registry' { foreach ($f in 'hive', 'key', 'name', 'type', 'value') {
@@ -95,17 +91,21 @@ Check 'all actions well formed' ($fieldErrors.Count -eq 0) ("{0} problem(s)" -f 
 $fieldErrors | Select-Object -First 10 | ForEach-Object { Write-Host "         $_" -ForegroundColor DarkYellow }
 
 Write-Host ''
-Write-Host '--- preset hierarchy (conservative C balanced C aggressive) ---' -ForegroundColor Cyan
-$sets = @{}
-foreach ($p in $validPresets) {
-    $sets[$p] = @($cat.actions | Where-Object { $_.presets -contains $p } | ForEach-Object { $_.id })
-    Write-Host ("  {0,-13} = {1} actions" -f $p, $sets[$p].Count)
-}
-foreach ($p in $validPresets) {
-    Check "preset '$p' is not empty" ($sets[$p].Count -gt 0)
-}
-Check 'conservative is a subset of balanced' ((@($sets['conservative'] | Where-Object { $sets['balanced'] -notcontains $_ })).Count -eq 0)
-Check 'balanced is a subset of aggressive' ((@($sets['balanced'] | Where-Object { $sets['aggressive'] -notcontains $_ })).Count -eq 0)
+Write-Host '--- default selection ---' -ForegroundColor Cyan
+# There is no tier to choose before you start: the catalog names one starting set,
+# and everything outside it is opt-in.
+$defaults = @($cat.actions | Where-Object { $_.default } | ForEach-Object { $_.id })
+$optIn    = @($cat.actions | Where-Object { -not $_.default } | ForEach-Object { $_.id })
+Write-Host ("  default = {0} actions" -f $defaults.Count)
+Write-Host ("  opt-in  = {0} actions" -f $optIn.Count)
+Check 'the default selection is not empty' ($defaults.Count -gt 0)
+Check 'the default selection is not everything' ($optIn.Count -gt 0) ("{0} opt-in" -f $optIn.Count)
+Check 'default and opt-in partition the catalog' (($defaults.Count + $optIn.Count) -eq $cat.actions.Count)
+Check 'the two sets do not overlap' ((@($defaults | Where-Object { $optIn -contains $_ })).Count -eq 0)
+# The whole point of removing presets is that nothing is implicitly re-added, so the
+# set that is on at startup must be the small one.
+$risky = @($cat.actions | Where-Object { $_.default -and $_.risk -eq 'high' })
+Check 'no high-risk action is on by default' ($risky.Count -eq 0) ("found: " + (($risky | ForEach-Object { $_.id }) -join ', '))
 
 Write-Host ''
 Write-Host '--- safety invariants ---' -ForegroundColor Cyan
@@ -130,7 +130,7 @@ Check 'no action disables an update/diagnostic service' ($wuRefs.Count -eq 0) ("
 $wallpaperRefs = @($cat.actions | Where-Object { (Get-OptProp $_ 'paths') -match 'TranscodedWallpaper|Themes\\CachedFiles' })
 Check 'no action deletes the wallpaper transcode copy' ($wallpaperRefs.Count -eq 0) ("found: " + (($wallpaperRefs | ForEach-Object { $_.id }) -join ', '))
 $hd = @($cat.actions | Where-Object { $_.id -eq 'onedrive.uninstall' })
-Check 'OneDrive action exists and is opt-in only' ($hd.Count -eq 1 -and -not ($hd[0].presets -contains 'conservative') -and -not ($hd[0].presets -contains 'balanced'))
+Check 'OneDrive action exists and is opt-in only' ($hd.Count -eq 1 -and -not $hd[0].default)
 
 Write-Host ''
 Write-Host '=== .bat front-end sanity ===' -ForegroundColor Cyan
