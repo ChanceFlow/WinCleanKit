@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **Dual-modal detail panel and comprehensive catalog descriptions.** The detail
+  panel adapts to the active pane: selecting a category on the left presents the
+  category's scope, overview, and selection count, while selecting an action on the
+  right presents that action's rationale, presets membership, and technical target.
+  All 74 actions across all 6 categories in `catalog/catalog.json` and `docs/CATALOG.md`
+  were expanded with thorough explanations (behavior, debloat rationale, trade-offs/side
+  effects, and reversibility), replacing previous terse one-liners.
 - **A language chooser as the first screen.** The full-screen interface used to open
   in English unconditionally, which is a poor welcome for anyone who cannot read it.
   It now opens on a bilingual chooser — the one screen that cannot assume a language,

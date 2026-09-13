@@ -100,6 +100,7 @@ Write-Head 'the detail panel describes the focused action'
 $st = Initialize-TuiState -Catalog $cat -Preset 'aggressive' -Language 'en'
 $st.ListIndex = 0
 $st.DetailIndex = 0
+$st.Pane = 'detail'; $st.Mode = 'detail'
 $focus = Get-TuiActionAt $st
 $frame = Get-TuiFrame -State $st -Width 120 -Height 34
 $joined = $frame -join "`n"
@@ -107,6 +108,16 @@ Check 'detail shows the focused title' ($joined.Contains($focus.title)) $focus.i
 Check 'detail shows why' ($joined.Contains((Get-TuiText -Object $focus -Base 'why' -Language 'en').Substring(0, 24))) 'why text present'
 $hasTarget = ($joined -match 'HKCU|HKLM|service |task |uninstall ') -or $focus.target -eq 'onedrive'
 Check 'detail shows the target' $hasTarget ("target=" + $focus.target)
+
+# When the category list is focused on the left, the detail panel shows the
+# category's overview rather than jumping straight to a specific action.
+$stCat = Initialize-TuiState -Catalog $cat -Preset 'aggressive' -Language 'en'
+$stCat.ListIndex = 0
+$stCat.Pane = 'list'; $stCat.Mode = 'list'
+$frameCat = Get-TuiFrame -State $stCat -Width 120 -Height 34
+$joinedCat = $frameCat -join "`n"
+Check 'detail shows category title' ($joinedCat.Contains('Ads & suggestions'))
+Check 'detail shows category description' ($joinedCat.Contains("Turns off commercial promotions"))
 
 # ---------------------------------------------------------------------------
 Write-Head 'exactly one pane shows the focus arrow'
@@ -176,6 +187,7 @@ Check 'cjk wrap respects the width' ((@($w4 | Where-Object { (Get-WidthOf $_) -g
 # The rationale must actually reach the screen: no blank rows below a cut sentence.
 $st = Initialize-TuiState -Catalog $cat -Preset 'aggressive' -Language 'en'
 $st.ListIndex = 0; $st.DetailIndex = 0
+$st.Pane = 'detail'; $st.Mode = 'detail'
 $f = Get-TuiFrame -State $st -Width 120 -Height 34
 $lw120 = Get-LeftWidth 120
 $panelRow = Get-DetailPanelRow $f $lw120
@@ -186,7 +198,7 @@ Check 'the rationale is rendered inside the detail panel' ($panelRow -ge 0 -and 
 # rows: a long title wraps, and what matters is that the text arrives intact.
 $whyRow = -1
 for ($i = $panelRow + 1; $i -lt $f.Count; $i++) {
-    if ((Get-LeftCell $f[$i] $lw120).Trim() -eq $whyRows[0]) { $whyRow = $i; break }
+    if ((Get-LeftCell $f[$i] $lw120).Trim() -eq $whyRows[0].Trim()) { $whyRow = $i; break }
 }
 Check 'the rationale starts verbatim in the frame' ($whyRow -gt $panelRow) ("row {0}, panel starts at {1}" -f $whyRow, $panelRow)
 Check 'no blank row sits between the rationale rows' ($whyRows.Count -lt 2 -or ($whyRow -ge 0 -and (Get-LeftCell $f[$whyRow + 1] $lw120).Trim() -ne '')) 'second rationale row is used'

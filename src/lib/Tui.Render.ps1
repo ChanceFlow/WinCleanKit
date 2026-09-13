@@ -301,28 +301,65 @@ function Get-TuiBody {
     # ---- left bottom: the detail panel ------------------------------------
     # Row 0 of this block is the divider itself, carrying the panel label, so the
     # label costs no extra row.
+    $isListPane = ($State.Pane -eq 'list')
     $detailLines = New-Object System.Collections.Generic.List[string]
-    $label = if ($zh) { ' 详情 ' } else { ' details ' }
+    $label = if ($isListPane) {
+        if ($zh) { ' 详情 · 分类 ' } else { ' details · category ' }
+    } else {
+        if ($zh) { ' 详情 · 条目 ' } else { ' details · action ' }
+    }
     $fill = $LeftWidth - (Get-TuiWidth $label)
     [void]$detailLines.Add($label + ('-' * [Math]::Max(0, $fill)))
 
-    $cur = Get-TuiActionAt $State
-    if ($cur) {
-        $riskNames = if ($zh) { @{ low = '低'; medium = '中'; high = '高' } } else { @{ low = 'low'; medium = 'medium'; high = 'high' } }
-        $targetLabel = if ($zh) { '触及: ' } else { 'Touches: ' }
-        $rows = [Math]::Max(2, $detailH - 1)
-        $title = "{0}   [{1}]" -f (Get-TuiText -Object $cur -Base 'title' -Language $State.Language), $riskNames[$cur.risk]
-        # The title takes the rows it actually needs, at most two, and everything
-        # left over is split between the rationale and the target. Reserving two
-        # rows for a one-line title left a blank line in the panel while the target
-        # was cut short at the bottom.
-        $titleLines = Get-TuiWrap -Text $title -Width $LeftWidth -Max 2
-        $rest = [Math]::Max(2, $rows - $titleLines.Count)
-        $whyRows = [Math]::Max(1, [int][Math]::Ceiling($rest / 2))
-        $tgtRows = [Math]::Max(1, $rest - $whyRows)
-        foreach ($x in $titleLines) { [void]$detailLines.Add($x) }
-        foreach ($x in (Get-TuiWrap -Text (Get-TuiText -Object $cur -Base 'why' -Language $State.Language) -Width $LeftWidth -Max $whyRows)) { [void]$detailLines.Add($x) }
-        foreach ($x in (Get-TuiWrap -Text ("{0}{1}" -f $targetLabel, (Get-TuiTargetLine -Action $cur)) -Width $LeftWidth -Max $tgtRows)) { [void]$detailLines.Add($x) }
+    $riskNames = if ($zh) { @{ low = '低'; medium = '中'; high = '高' } } else { @{ low = 'low'; medium = 'medium'; high = 'high' } }
+    $rows = [Math]::Max(2, $detailH - 1)
+
+    if ($isListPane) {
+        # When browsing categories on the left: show the focused category's
+        # role, scope, selection count, and navigation hint.
+        if ($State.ListIndex -lt $State.Groups.Count) {
+            $g = $State.Groups[$State.ListIndex]
+            $catObj = @($State.Catalog.categories | Where-Object { $_.id -eq $g.id })[0]
+            $catName = if ($zh -and $catObj.PSObject.Properties.Name -contains 'name_zh' -and $catObj.name_zh) { $catObj.name_zh } else { $catObj.name }
+            $catRisk = if ($catObj.PSObject.Properties.Name -contains 'risk' -and $catObj.risk) { $riskNames[$catObj.risk] } else { $riskNames['low'] }
+            $catTitle = if ($zh) { "[分类] {0}   [{1}]" -f $catName, $catRisk } else { "[category] {0}   [{1}]" -f $catName, $catRisk }
+            $selCount = 0
+            foreach ($a in $State.Catalog.actions) {
+                if ($a.category -eq $g.id -and $State.Selected.ContainsKey($a.id)) { $selCount++ }
+            }
+            $statsLine = if ($zh) {
+                "勾选: {0}/{1} 项   提示: Enter/Tab 细选" -f $selCount, $g.count
+            } else {
+                "Selected: {0}/{1}   Hint: Enter/Tab to inspect" -f $selCount, $g.count
+            }
+            $catDesc = Get-TuiText -Object $catObj -Base 'description' -Language $State.Language
+            [void]$detailLines.Add($catTitle)
+            [void]$detailLines.Add($statsLine)
+            $descRows = [Math]::Max(1, $rows - 2)
+            foreach ($x in (Get-TuiWrap -Text $catDesc -Width $LeftWidth -Max $descRows)) { [void]$detailLines.Add($x) }
+        }
+    } else {
+        # When browsing actions on the right: show the focused action's title,
+        # presets membership, rationale, and concrete touches.
+        $cur = Get-TuiActionAt $State
+        if ($cur) {
+            $targetLabel = if ($zh) { '触及: ' } else { 'Touches: ' }
+            $title = "{0}   [{1}]" -f (Get-TuiText -Object $cur -Base 'title' -Language $State.Language), $riskNames[$cur.risk]
+            $titleLines = Get-TuiWrap -Text $title -Width $LeftWidth -Max 2
+
+            $presetMap = if ($zh) { @{ conservative = '保守'; balanced = '均衡'; aggressive = '激进' } } else { @{ conservative = 'conservative'; balanced = 'balanced'; aggressive = 'aggressive' } }
+            $presetText = ($cur.presets | ForEach-Object { if ($presetMap.ContainsKey($_)) { $presetMap[$_] } else { $_ } }) -join ', '
+            $presetLine = if ($zh) { "预设: {0}" -f $presetText } else { "Presets: {0}" -f $presetText }
+
+            $rest = [Math]::Max(2, $rows - $titleLines.Count - 1)
+            $whyRows = [Math]::Max(1, [int][Math]::Ceiling($rest / 2))
+            $tgtRows = [Math]::Max(1, $rest - $whyRows)
+
+            foreach ($x in $titleLines) { [void]$detailLines.Add($x) }
+            [void]$detailLines.Add($presetLine)
+            foreach ($x in (Get-TuiWrap -Text (Get-TuiText -Object $cur -Base 'why' -Language $State.Language) -Width $LeftWidth -Max $whyRows)) { [void]$detailLines.Add($x) }
+            foreach ($x in (Get-TuiWrap -Text ("{0}{1}" -f $targetLabel, (Get-TuiTargetLine -Action $cur)) -Width $LeftWidth -Max $tgtRows)) { [void]$detailLines.Add($x) }
+        }
     }
     while ($detailLines.Count -lt ($detailH + 1)) { [void]$detailLines.Add('') }
     while ($detailLines.Count -gt ($detailH + 1)) { $detailLines.RemoveAt($detailLines.Count - 1) }
