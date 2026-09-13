@@ -247,6 +247,13 @@ function Select-TuiLanguage {
     $rebuilt.ListIndex   = [Math]::Min($State.ListIndex, [Math]::Max(0, $rebuilt.Groups.Count - 1))
     $rebuilt.DetailIndex = $State.DetailIndex
     $rebuilt.Message     = $State.Message
+    # Where the user is standing is not part of the language. Rebuilding the state
+    # resets these to the opening view, so without copying them back, switching
+    # language from the detail pane or the help screen would throw the user back
+    # to the list -- the one thing a language toggle must never do.
+    $rebuilt.Mode        = $State.Mode
+    $rebuilt.Pane        = $State.Pane
+    $rebuilt.ScrollTop   = $State.ScrollTop
     return $rebuilt
 }
 

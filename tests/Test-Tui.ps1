@@ -209,6 +209,21 @@ Check 'en applied to groups' ((@($st.Groups | Where-Object { Test-HasCjk $_.name
 $st = Select-TuiLanguage -State $st -Language 'klingon'
 Check 'unknown language ignored' ($st.Language -eq 'en')
 
+# The language toggle rebuilds the state from the catalog, which resets the view
+# to its opening position. Where the user is standing has to survive that, or
+# pressing `l` from the detail pane or the help screen drops them back to the list.
+$here = Initialize-TuiState -Catalog $cat -Preset 'balanced' -Language 'en'
+$here = Move-TuiCursor -State $here -Direction 'down'
+$here = Switch-TuiPane -State $here
+$here = Move-TuiCursor -State $here -Direction 'down'
+$before = '{0}|{1}|{2}|{3}' -f $here.Mode, $here.Pane, $here.ListIndex, $here.DetailIndex
+$here = Select-TuiLanguage -State $here -Language 'zh'
+Check 'language switch keeps the current view' (('{0}|{1}|{2}|{3}' -f $here.Mode, $here.Pane, $here.ListIndex, $here.DetailIndex) -eq $before) $before
+$help = Initialize-TuiState -Catalog $cat -Preset 'balanced' -Language 'en'
+$help = Select-TuiMode -State $help -Mode 'help'
+$help = Select-TuiLanguage -State $help -Language 'zh'
+Check 'language switch stays on the help screen' ($help.Mode -eq 'help') ("mode is $($help.Mode)")
+
 # ---------------------------------------------------------------------------
 Write-Head 'mode switching'
 $st = Select-TuiMode -State $st -Mode 'help'

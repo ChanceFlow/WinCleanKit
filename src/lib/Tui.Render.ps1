@@ -165,12 +165,20 @@ function Get-TuiFrame {
     # because a truncated name is the one thing a user cannot infer.
     $leftW  = [Math]::Max(24, [int]($inner * 0.38))
     $rightW = $inner - $leftW - 1
-    $bodyH  = $h - 8                # header(4) + keys(1) + status(1) + borders(2)
+    # A frame must be exactly as tall as the terminal, no taller: one extra row
+    # makes the alternate screen buffer scroll on every repaint, which reads as
+    # the whole interface jumping. The fixed rows are the header (rule + two rows
+    # + rule = 4), the two body rules, the key line, the status line and the
+    # footer rule = 9.
+    $bodyH  = $h - 9
     if ($bodyH -lt 6) { $bodyH = 6 }
-    if ($State.Mode -eq 'help') { $bodyH = $h - 8 }
 
-    # Border rows for the body
-    [void]$lines.Add('+' + ('-' * $leftW) + '+' + ('-' * $rightW) + '+')
+    # Border rows for the body. The two-pane view needs a junction in the middle
+    # to meet the vertical divider; the help page spans the full width, so it gets
+    # a plain rule instead of a stray '+' floating in the middle of the border.
+    $bodyRule = if ($State.Mode -eq 'help') { '+' + ('-' * $inner) + '+' }
+                else { '+' + ('-' * $leftW) + '+' + ('-' * $rightW) + '+' }
+    [void]$lines.Add($bodyRule)
 
     if ($State.Mode -eq 'help') {
         $body = Get-TuiHelpBody -State $State -Width $inner -Height $bodyH
@@ -179,7 +187,7 @@ function Get-TuiFrame {
     }
     foreach ($b in $body) { [void]$lines.Add($b) }
 
-    [void]$lines.Add('+' + ('-' * $leftW) + '+' + ('-' * $rightW) + '+')
+    [void]$lines.Add($bodyRule)
 
     # ---- keys + status ----------------------------------------------------
     $keys = ' ' + (Get-TuiKeyHelp -Language $State.Language -Width $inner)
@@ -303,13 +311,13 @@ function Get-TuiHelpBody {
     }
     $out = New-Object System.Collections.Generic.List[string]
     $title = if ($zh) { '按键说明' } else { 'Keyboard' }
-    [void]$out.Add(('|' + (Format-TuiCell (' ' + $title) ($Width + 1)) + '|'))
+    [void]$out.Add(('|' + (Format-TuiCell (' ' + $title) $Width) + '|'))
     $keyW = 14
     foreach ($r in $rows) {
         $line = '  ' + (Format-TuiCell $r[0] $keyW) + $r[1]
-        [void]$out.Add('|' + (Format-TuiCell $line ($Width + 1)) + '|')
+        [void]$out.Add('|' + (Format-TuiCell $line $Width) + '|')
     }
-    while ($out.Count -lt $Height) { [void]$out.Add('|' + (' ' * ($Width + 1)) + '|') }
+    while ($out.Count -lt $Height) { [void]$out.Add('|' + (' ' * $Width) + '|') }
     return , $out.ToArray()
 }
 

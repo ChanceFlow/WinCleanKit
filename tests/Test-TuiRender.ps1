@@ -67,7 +67,9 @@ foreach ($lang in 'en', 'zh') {
         $frame = Get-TuiFrame -State $st -Width $w -Height $h
         $bad = @($frame | Where-Object { (Get-WidthOf $_) -ne $w })
         Check "every line is $w wide ($lang)" ($bad.Count -eq 0) ("{0} bad of {1}" -f $bad.Count, $frame.Count)
-        Check "frame has rows for ${w}x${h} ($lang)" ($frame.Count -ge 12) ("{0} rows" -f $frame.Count)
+        # Exact, not "at least": one row more than the terminal and the alternate
+        # screen buffer scrolls on every repaint.
+        Check "frame has exactly $h rows for ${w}x${h} ($lang)" ($frame.Count -eq $h) ("{0} rows" -f $frame.Count)
         Check "top border is a full rule ($lang)" ($frame[0] -eq ('+' + ('-' * ($w - 2)) + '+')) $frame[0]
     }
 }
@@ -125,8 +127,13 @@ foreach ($lang in 'en', 'zh') {
     $f = Get-TuiFrame -State $stLang -Width 100 -Height 30
     $bad = @($f | Where-Object { (Get-WidthOf $_) -ne 100 })
     Check "help frame is well formed ($lang)" ($bad.Count -eq 0) ("{0} bad lines" -f $bad.Count)
+    Check "help frame is exactly 30 rows ($lang)" ($f.Count -eq 30) ("{0} rows" -f $f.Count)
     $joined = $f -join "`n"
     Check "help lists the apply key ($lang)" ($joined -match '\bx\b') 'apply key documented'
+    # The help page spans both panes, so its border rules must not carry the
+    # junction that joins the vertical divider in the two-pane view.
+    $junction = @($f | Where-Object { $_ -match '^\+\-+\+\-+\+$' })
+    Check "help border has no pane junction ($lang)" ($junction.Count -eq 0) 'rules span the full inner width'
 }
 
 # ---------------------------------------------------------------------------
