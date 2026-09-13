@@ -71,6 +71,17 @@ All notable changes to this project are documented here. The format follows
   counts, and the reasoning behind each excluded rule.
 
 ### Changed
+- **The action column is now only the action list, and the detail text moved to a
+  panel under the categories.** The list runs the full height of the body — 21 rows
+  at 100x30, where the old 55% split gave it 15 — and nothing about it changes shape
+  when the cursor moves. The detail panel answers "what does this actually do?" for
+  the focused action, with the rationale and the target wrapped across the rows it
+  has instead of being cut. Its height is a function of the terminal size alone, so
+  neither the cursor nor a change of category can move it, and its label rides on
+  the divider row so it costs no extra line. The category column is a little wider
+  (42%) because it now carries the wrapping text, and the panel gives the title only
+  the rows it needs, so a one-line title no longer leaves a gap while the target is
+  truncated at the bottom.
 - `WinCleanKit.bat` is now purely an elevation launcher: cmd cannot read arrow
   keys, so a full-screen interface is impossible there. It hands the session to the
   engine's TUI and keeps the numbered menu behind `--simple`.

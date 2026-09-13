@@ -205,11 +205,12 @@ function Get-TuiFrame {
     [void]$lines.Add('+' + ('-' * $inner) + '+')
 
     # ---- body -------------------------------------------------------------
-    # Left pane: categories. Right pane: actions + detail.
-    # 38% fits the longest category name in either language ("Windows ads &
-    # suggestions" / "广告图缓存与壁纸") without truncating it, which matters
-    # because a truncated name is the one thing a user cannot infer.
-    $leftW  = [Math]::Max(24, [int]($inner * 0.38))
+    # Left column: categories on top, the detail panel beneath them. Right column:
+    # the action list, and nothing else.
+    # The left column carries the wrapping explanatory text now, so it takes a
+    # little more than the 38% that only ever had to fit a category name. 42%
+    # still fits the longest name in either language together with its counts.
+    $leftW  = [Math]::Max(24, [int]($inner * 0.42))
     $rightW = $inner - $leftW - 1
     # A frame must be exactly as tall as the terminal, no taller: one extra row
     # makes the alternate screen buffer scroll on every repaint, which reads as
@@ -251,7 +252,16 @@ function Get-TuiFrame {
 
 function Get-TuiBody {
     <#
-      The list pane and the detail pane, already bordered and fitted.
+      The body of the main view.
+
+      Left column: the category list, with the detail panel beneath it.
+      Right column: the action list, and nothing else.
+
+      The right column used to end in a detail block, which meant its shape changed
+      with the focused action. It is now a plain list that runs the full height and
+      never moves. The detail panel answers "what does this actually do?" for the
+      focused action, and sits under the categories where there is room for the
+      explanation to wrap instead of being cut.
     #>
     [CmdletBinding()]
     param($State, [int]$LeftWidth, [int]$RightWidth, [int]$Height)
@@ -259,78 +269,89 @@ function Get-TuiBody {
     $zh = ($State.Language -eq 'zh')
     $out = New-Object System.Collections.Generic.List[string]
 
-    # ---- left: categories ------------------------------------------------
-    $leftLines = New-Object System.Collections.Generic.List[string]
-    $top = Get-TuiWindow -Total $State.Groups.Count -Height $Height -Cursor $State.ListIndex
-    for ($i = 0; $i -lt $Height; $i++) {
+    # How tall is the detail panel? Proportional and bounded, and a function of the
+    # terminal size alone - never of the focused action - so it cannot move.
+    $detailH = [Math]::Min(11, [Math]::Max(5, [int]($Height * 0.40)))
+    $detailH = [Math]::Min($detailH, [Math]::Max(3, $Height - 4))
+    $catH = [Math]::Max(1, $Height - $detailH - 1)
+
+    # ---- left top: categories --------------------------------------------
+    $catLines = New-Object System.Collections.Generic.List[string]
+    $top = Get-TuiWindow -Total $State.Groups.Count -Height $catH -Cursor $State.ListIndex
+    for ($i = 0; $i -lt $catH; $i++) {
         $gi = $top + $i
-        if ($gi -ge $State.Groups.Count) { [void]$leftLines.Add(''); continue }
+        if ($gi -ge $State.Groups.Count) { [void]$catLines.Add(''); continue }
         $g = $State.Groups[$gi]
         $sel = 0
         foreach ($a in $State.Catalog.actions) {
             if ($a.category -eq $g.id -and $State.Selected.ContainsKey($a.id)) { $sel++ }
         }
-        $focus = ($gi -eq $State.ListIndex)
+        # Only the pane that has the keyboard draws the focus arrow.
         $mark = ''
-        if ($focus) { $mark = if ($State.Pane -eq 'list') { '>' } else { '-' } }
-        $line = "{0} {1,3}/{2,-3} {3}" -f $mark, $sel, $g.count, $g.name
-        [void]$leftLines.Add($line)
+        if ($gi -eq $State.ListIndex) { $mark = if ($State.Pane -eq 'list') { '>' } else { '-' } }
+        [void]$catLines.Add(("{0} {1,3}/{2,-3} {3}" -f $mark, $sel, $g.count, $g.name))
     }
 
-    # ---- right: actions, then a detail block pinned to the bottom ---------
-    # The detail block has a fixed height and always occupies the last rows, so
-    # neither moving the cursor nor changing category can shift it: the pane has
-    # one stable structure instead of a block that floats to wherever the focused
-    # action happens to end. Every remaining row belongs to the action list, which
-    # is also why the rationale can be given room to wrap rather than be cut off
-    # with an ellipsis while blank rows sit underneath it.
-    $items = Get-TuiGroupAction $State
-    # A taller terminal gives the detail more room, which is what lets a long
-    # rationale be shown instead of cut. The height depends only on the terminal
-    # size, never on the focused action, so the block still never moves.
-    $detailH = [Math]::Min(10, [Math]::Max(6, [int]($Height * 0.33)))
-    $detailH = [Math]::Min($detailH, [Math]::Max(1, $Height - 1))
-    $listH = [Math]::Max(1, $Height - $detailH)
+    # ---- left bottom: the detail panel ------------------------------------
+    # Row 0 of this block is the divider itself, carrying the panel label, so the
+    # label costs no extra row.
+    $detailLines = New-Object System.Collections.Generic.List[string]
+    $label = if ($zh) { ' 详情 ' } else { ' details ' }
+    $fill = $LeftWidth - (Get-TuiWidth $label)
+    [void]$detailLines.Add($label + ('-' * [Math]::Max(0, $fill)))
 
+    $cur = Get-TuiActionAt $State
+    if ($cur) {
+        $riskNames = if ($zh) { @{ low = '低'; medium = '中'; high = '高' } } else { @{ low = 'low'; medium = 'medium'; high = 'high' } }
+        $targetLabel = if ($zh) { '触及: ' } else { 'Touches: ' }
+        $rows = [Math]::Max(2, $detailH - 1)
+        $title = "{0}   [{1}]" -f (Get-TuiText -Object $cur -Base 'title' -Language $State.Language), $riskNames[$cur.risk]
+        # The title takes the rows it actually needs, at most two, and everything
+        # left over is split between the rationale and the target. Reserving two
+        # rows for a one-line title left a blank line in the panel while the target
+        # was cut short at the bottom.
+        $titleLines = Get-TuiWrap -Text $title -Width $LeftWidth -Max 2
+        $rest = [Math]::Max(2, $rows - $titleLines.Count)
+        $whyRows = [Math]::Max(1, [int][Math]::Ceiling($rest / 2))
+        $tgtRows = [Math]::Max(1, $rest - $whyRows)
+        foreach ($x in $titleLines) { [void]$detailLines.Add($x) }
+        foreach ($x in (Get-TuiWrap -Text (Get-TuiText -Object $cur -Base 'why' -Language $State.Language) -Width $LeftWidth -Max $whyRows)) { [void]$detailLines.Add($x) }
+        foreach ($x in (Get-TuiWrap -Text ("{0}{1}" -f $targetLabel, (Get-TuiTargetLine -Action $cur)) -Width $LeftWidth -Max $tgtRows)) { [void]$detailLines.Add($x) }
+    }
+    while ($detailLines.Count -lt ($detailH + 1)) { [void]$detailLines.Add('') }
+    while ($detailLines.Count -gt ($detailH + 1)) { $detailLines.RemoveAt($detailLines.Count - 1) }
+
+    # ---- right: the action list, and nothing else -------------------------
+    $items = Get-TuiGroupAction $State
     $rightLines = New-Object System.Collections.Generic.List[string]
-    $dTop = Get-TuiWindow -Total $items.Count -Height $listH -Cursor $State.DetailIndex
-    for ($i = 0; $i -lt $listH; $i++) {
+    $dTop = Get-TuiWindow -Total $items.Count -Height $Height -Cursor $State.DetailIndex
+    for ($i = 0; $i -lt $Height; $i++) {
         $ai = $dTop + $i
         if ($ai -ge $items.Count) { [void]$rightLines.Add(''); continue }
         $a = $items[$ai]
         $on = $State.Selected.ContainsKey($a.id)
         $box = if ($on) { '[x]' } else { '[ ]' }
-        # Same rule as the category pane: the arrow belongs to the pane that has
-        # the keyboard, the other pane marks its cursor row quietly.
+        # Same rule as the category list: the arrow belongs to the pane that has
+        # the keyboard, the other list marks its cursor row quietly.
         $mark = ''
         if ($ai -eq $State.DetailIndex) { $mark = if ($State.Pane -eq 'detail') { '>' } else { '-' } }
-        $cur = Get-TuiText -Object $a -Base 'title' -Language $State.Language
-        [void]$rightLines.Add(("{0} {1} {2}" -f $mark, $box, $cur))
+        [void]$rightLines.Add(("{0} {1} {2}" -f $mark, $box, (Get-TuiText -Object $a -Base 'title' -Language $State.Language)))
     }
 
-    # detail block for the focused action
-    $detail = New-Object System.Collections.Generic.List[string]
-    $cur = Get-TuiActionAt $State
-    if ($cur) {
-        $riskNames = if ($zh) { @{ low = '低'; medium = '中'; high = '高' } } else { @{ low = 'low'; medium = 'medium'; high = 'high' } }
-        $targetLabel = if ($zh) { '触及: ' } else { 'Touches: ' }
-        $rows    = [Math]::Max(1, $detailH - 2)          # the separator and the title take two
-        $whyRows = [Math]::Max(1, [int][Math]::Ceiling($rows / 2))
-        $tgtRows = [Math]::Max(1, $rows - $whyRows)
-        [void]$detail.Add('')                            # separator between list and detail
-        [void]$detail.Add(("{0}   [{1}]" -f (Get-TuiText -Object $cur -Base 'title' -Language $State.Language), $riskNames[$cur.risk]))
-        foreach ($x in (Get-TuiWrap -Text (Get-TuiText -Object $cur -Base 'why' -Language $State.Language) -Width $RightWidth -Max $whyRows)) { [void]$detail.Add($x) }
-        foreach ($x in (Get-TuiWrap -Text ("{0}{1}" -f $targetLabel, (Get-TuiTargetLine -Action $cur)) -Width $RightWidth -Max $tgtRows)) { [void]$detail.Add($x) }
-    }
-    while ($detail.Count -lt $detailH) { [void]$detail.Add('') }
-    while ($detail.Count -gt $detailH) { $detail.RemoveAt($detail.Count - 1) }
-
-    # ---- combine, fitting both panes to height ---------------------------
+    # ---- combine, fitting both columns to height --------------------------
     for ($i = 0; $i -lt $Height; $i++) {
-        $l = if ($i -lt $leftLines.Count) { $leftLines[$i] } else { '' }
-        if ($i -lt $listH) { $r = if ($i -lt $rightLines.Count) { $rightLines[$i] } else { '' } }
-        else               { $r = $detail[$i - $listH] }
-        [void]$out.Add('|' + (Format-TuiCell $l $LeftWidth) + '|' + (Format-TuiCell $r $RightWidth) + '|')
+        $right = if ($i -lt $rightLines.Count) { $rightLines[$i] } else { '' }
+        if ($i -lt $catH) {
+            $left = if ($i -lt $catLines.Count) { $catLines[$i] } else { '' }
+            [void]$out.Add('|' + (Format-TuiCell $left $LeftWidth) + '|' + (Format-TuiCell $right $RightWidth) + '|')
+        } elseif ($i -eq $catH) {
+            # The panel divider: the outer border and the vertical divider both
+            # become junctions, the way a stacked-panel layout is normally drawn.
+            # The action column carries straight on to its right.
+            [void]$out.Add('+' + (Format-TuiCell $detailLines[0] $LeftWidth) + '+' + (Format-TuiCell $right $RightWidth) + '|')
+        } else {
+            [void]$out.Add('|' + (Format-TuiCell $detailLines[$i - $catH] $LeftWidth) + '|' + (Format-TuiCell $right $RightWidth) + '|')
+        }
     }
     return , $out.ToArray()
 }

@@ -8,7 +8,7 @@
 
       * every line of a frame is exactly the requested width (width-aware, CJK included)
       * the frame has the requested number of lines, and the box corners line up
-      * the detail pane actually describes the focused action
+      * the detail panel actually describes the focused action
       * the list pane shows selected/total counts that match the selection
       * the help screen renders, and both languages render
       * the frame reacts to size changes without breaking
@@ -96,7 +96,7 @@ Check 'clearing updates the count' ((@($frame | Where-Object { $_ -match 'plan: 
 Check 'clearing drops the risk to none' ((@($frame | Where-Object { $_ -match 'highest risk: none' }).Count) -eq 1)
 
 # ---------------------------------------------------------------------------
-Write-Head 'detail pane describes the focused action'
+Write-Head 'the detail panel describes the focused action'
 $st = Initialize-TuiState -Catalog $cat -Preset 'aggressive' -Language 'en'
 $st.ListIndex = 0
 $st.DetailIndex = 0
@@ -114,12 +114,16 @@ Write-Head 'exactly one pane shows the focus arrow'
 # showed two focus markers and no way to tell which pane the keyboard was in.
 function Get-LeftCell  { param([string]$Line, [int]$LeftWidth) $Line.Substring(1, $LeftWidth) }
 function Get-RightCell { param([string]$Line, [int]$LeftWidth) $Line.Substring($LeftWidth + 2) }
-function Get-LeftWidth { param([int]$Width) [Math]::Max(24, [int](($Width - 2) * 0.38)) }
-function Get-DetailRow {
-    # The detail block is the only place the risk tag appears.
+function Get-LeftWidth { param([int]$Width) [Math]::Max(24, [int](($Width - 2) * 0.42)) }
+function Get-DetailPanelRow {
+    # The panel's first row is its labelled divider. That row depends only on the
+    # terminal size, which is exactly what "the panel never moves" means. Anchoring
+    # on the risk tag instead would drift: a long title wraps, so the tag moves
+    # inside the panel even though the panel itself does not.
     param([string[]]$Frame, [int]$LeftWidth)
     for ($i = 0; $i -lt $Frame.Count; $i++) {
-        if ((Get-RightCell $Frame[$i] $LeftWidth) -match '\[(low|medium|high)\]\s*\|?$') { return $i }
+        $l = Get-LeftCell $Frame[$i] $LeftWidth
+        if ($l.Trim() -match '^(details|详情)') { return $i }
     }
     return -1
 }
@@ -141,19 +145,19 @@ foreach ($pane in 'list', 'detail') {
 }
 
 # ---------------------------------------------------------------------------
-Write-Head 'the detail block never moves'
-# It used to sit directly under the action list, so a category with one action put
-# the detail near the top and a long one put it near the middle: the pane had no
-# stable shape and the eye had to re-find it on every category change.
+Write-Head 'the detail panel never moves'
+# The panel's height depends only on the terminal size, never on the focused action
+# or the category, so the boundary between the category list and the panel - and
+# everything inside the panel - stays where the eye last found it.
 $rows = @()
 foreach ($case in @(@(0, 0), @(0, 20), @(1, 0), @(2, 0))) {
     $st = Initialize-TuiState -Catalog $cat -Preset 'balanced' -Language 'en'
     $st.ListIndex = $case[0]; $st.DetailIndex = $case[1]
     $f = Get-TuiFrame -State $st -Width 100 -Height 30
-    $rows += (Get-DetailRow $f $lw)
+    $rows += (Get-DetailPanelRow $f $lw)
 }
-Check 'detail block found in every case' ((@($rows | Where-Object { $_ -lt 0 })).Count -eq 0) ($rows -join ',')
-Check 'detail row is identical for every category and cursor' ((@($rows | Select-Object -Unique)).Count -eq 1) ("rows: " + ($rows -join ','))
+Check 'the panel is found in every case' ((@($rows | Where-Object { $_ -lt 0 })).Count -eq 0) ($rows -join ',')
+Check 'the panel row is identical for every category and cursor' ((@($rows | Select-Object -Unique)).Count -eq 1) ("rows: " + ($rows -join ','))
 
 # ---------------------------------------------------------------------------
 Write-Head 'detail text wraps instead of being cut off'
@@ -173,14 +177,35 @@ Check 'cjk wrap respects the width' ((@($w4 | Where-Object { (Get-WidthOf $_) -g
 $st = Initialize-TuiState -Catalog $cat -Preset 'aggressive' -Language 'en'
 $st.ListIndex = 0; $st.DetailIndex = 0
 $f = Get-TuiFrame -State $st -Width 120 -Height 34
-$lw120  = Get-LeftWidth 120
-$row    = Get-DetailRow $f $lw120
-$rightW = (120 - 2) - $lw120 - 1
+$lw120 = Get-LeftWidth 120
+$panelRow = Get-DetailPanelRow $f $lw120
 $why = Get-TuiText -Object (Get-TuiActionAt $st) -Base 'why' -Language 'en'
-$wrapped = Get-TuiWrap -Text $why -Width $rightW -Max 2
-Check 'rationale is wrapped across the rows it was given' ($wrapped.Count -ge 1) ("{0} rows, width {1}" -f $wrapped.Count, $rightW)
-Check 'wrapped rationale appears verbatim in the frame' ((Get-RightCell $f[$row + 1] $lw120).TrimEnd('|').Trim() -eq $wrapped[0]) $wrapped[0]
-Check 'no blank row sits between the rationale rows' ($wrapped.Count -lt 2 -or (Get-RightCell $f[$row + 2] $lw120).Trim().Trim('|') -ne '') 'second rationale row is used'
+$whyRows = Get-TuiWrap -Text $why -Width $lw120 -Max 12
+Check 'the rationale is rendered inside the detail panel' ($panelRow -ge 0 -and $whyRows.Count -ge 1) ("{0} rows at width {1}" -f $whyRows.Count, $lw120)
+# Find the row the rationale actually landed on rather than counting the title
+# rows: a long title wraps, and what matters is that the text arrives intact.
+$whyRow = -1
+for ($i = $panelRow + 1; $i -lt $f.Count; $i++) {
+    if ((Get-LeftCell $f[$i] $lw120).Trim() -eq $whyRows[0]) { $whyRow = $i; break }
+}
+Check 'the rationale starts verbatim in the frame' ($whyRow -gt $panelRow) ("row {0}, panel starts at {1}" -f $whyRow, $panelRow)
+Check 'no blank row sits between the rationale rows' ($whyRows.Count -lt 2 -or ($whyRow -ge 0 -and (Get-LeftCell $f[$whyRow + 1] $lw120).Trim() -ne '')) 'second rationale row is used'
+
+# The right column is a plain list now: it must have no risk tag and no divider
+# junction, so nothing in it can change shape when the cursor moves.
+$rightHasTag = @($f | Where-Object { (Get-RightCell $_ $lw120) -match '\[(low|medium|high)\]' })
+Check 'the action column carries no detail text' ($rightHasTag.Count -eq 0) ("{0} rows" -f $rightHasTag.Count)
+$rightListRows = @($f | Where-Object { (Get-RightCell $_ $lw120) -match '^\s*[>\- ]\s*\[[ x]\]' })
+Check 'the action column is a list the whole way down' ($rightListRows.Count -ge 20) ("{0} item rows of {1} body rows" -f $rightListRows.Count, (34 - 9))
+
+# ---------------------------------------------------------------------------
+Write-Head 'the detail panel sits under the categories'
+$f = Get-TuiFrame -State $st -Width 120 -Height 34
+$dividerRow = Get-DetailPanelRow $f $lw120
+Check 'the panel divider carries a label' ($dividerRow -ge 0) ("row {0}" -f $dividerRow)
+Check 'the divider joins the outer border and the vertical divider' ($dividerRow -ge 0 -and $f[$dividerRow][0] -eq '+' -and $f[$dividerRow][$lw120 + 1] -eq '+') 'both ends are junctions'
+Check 'the divider is inside the body, with the category column above it' ($dividerRow -gt 5 -and $f[$dividerRow - 1].StartsWith('|')) ("row {0}" -f $dividerRow)
+Check 'the action column carries on across the divider' ($dividerRow -ge 0 -and (Get-RightCell $f[$dividerRow] $lw120) -match '\[[ x]\]') 'the list does not break at the divider'
 
 # ---------------------------------------------------------------------------
 Write-Head 'checkbox state is visible per row'
