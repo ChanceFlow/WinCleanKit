@@ -64,16 +64,14 @@ Check 'every action references a real category' ($orphans.Count -eq 0) ("orphans
 Write-Host ''
 Write-Host '--- required fields ---' -ForegroundColor Cyan
 $validTargets = 'registry', 'service', 'task', 'appx', 'path-clean', 'onedrive'
-$validRisk = 'low', 'medium', 'high'
 $fieldErrors = New-Object System.Collections.Generic.List[string]
 foreach ($a in $cat.actions) {
-    foreach ($f in 'id', 'category', 'target', 'risk', 'title', 'title_zh', 'why', 'why_zh') {
+    foreach ($f in 'id', 'category', 'target', 'title', 'title_zh', 'why', 'why_zh') {
         if (-not ($a.PSObject.Properties.Name -contains $f) -or -not $a.$f) {
             $fieldErrors.Add("$($a.id): missing $f")
         }
     }
     if ($validTargets -notcontains $a.target) { $fieldErrors.Add("$($a.id): bad target '$($a.target)'") }
-    if ($validRisk -notcontains $a.risk) { $fieldErrors.Add("$($a.id): bad risk '$($a.risk)'") }
     if (-not ($a.PSObject.Properties.Name -contains 'default')) { $fieldErrors.Add("$($a.id): no default flag") }
     # target-specific required fields
     switch ($a.target) {
@@ -104,8 +102,11 @@ Check 'default and opt-in partition the catalog' (($defaults.Count + $optIn.Coun
 Check 'the two sets do not overlap' ((@($defaults | Where-Object { $optIn -contains $_ })).Count -eq 0)
 # The whole point of removing presets is that nothing is implicitly re-added, so the
 # set that is on at startup must be the small one.
-$risky = @($cat.actions | Where-Object { $_.default -and $_.risk -eq 'high' })
-Check 'no high-risk action is on by default' ($risky.Count -eq 0) ("found: " + (($risky | ForEach-Object { $_.id }) -join ', '))
+# The risk label is gone, but the protection it encoded is not: with no `risk` field
+# left, the invariant is expressed on what an action actually does.
+$destructiveDefault = @($cat.actions | Where-Object { $_.default -and $_.target -in 'appx', 'onedrive' })
+Check 'nothing that uninstalls software is on by default' ($destructiveDefault.Count -eq 0) ("found: " + (($destructiveDefault | ForEach-Object { $_.id }) -join ', '))
+Check 'the risk field is gone from every action' ((@($cat.actions | Where-Object { $_.PSObject.Properties.Name -contains 'risk' })).Count -eq 0) 'the label was removed on purpose'
 
 Write-Host ''
 Write-Host '--- safety invariants ---' -ForegroundColor Cyan

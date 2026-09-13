@@ -23,7 +23,6 @@ actually touch?" before you commit to anything:
 ```text
 +--------------------------------------------------------------------------------------------+
 | WinCleanKit v0.1.0   plan: 45 actions                                                      |
-| highest risk: medium                                                                       |
 +--------------------------------------------------------------------------------------------+
 +---------------------------------------+----------------------------------------------------+
 |-  20/22  Ads & suggestions            |> [x] Forbid silent app installation                |
@@ -35,14 +34,15 @@ actually touch?" before you commit to anything:
 |                                       | [x] Disable content delivery                       |
 |                                       | [x] Disable OEM preinstalled app promotions        |
 |                                       | [x] Disable soft landing / welcome pages           |
-+ details · action ---------------------+ [x] Remove Start menu Recommended section ads      |
-|Forbid silent app installation   [low] | [x] Disable recent-file suggestions                |
-|Stops ContentDeliveryManager silently d| [x] Hide taskbar Widgets button                    |
-|ownloading and pinning sponsored apps (| [x] Hide taskbar Chat (Teams) button               |
-|e.g. TikTok, games) into your Start me…| [x] Hide desktop 'Learn about this picture' icon   |
-|Touches: HKCU\Software\Microsoft\Window| [x] Disable search box web suggestions             |
-|s\CurrentVersion\ContentDeliveryManage…| [ ] Hide Settings home page promos                 |
-|                                       | [x] Disable Edge promotional tabs & recommendations|
+|                                       | [x] Remove Start menu Recommended section ads      |
++ details · action ---------------------+ [x] Disable recent-file suggestions                |
+|Forbid silent app installation         | [x] Hide taskbar Widgets button                    |
+|Stops ContentDeliveryManager silently d| [x] Hide taskbar Chat (Teams) button               |
+|ownloading and pinning sponsored apps (| [x] Hide desktop 'Learn about this picture' icon   |
+|e.g. TikTok, games) into your Start me…| [x] Disable search box web suggestions             |
+|Touches: HKCU\Software\Microsoft\Window| [ ] Hide Settings home page promos                 |
+|s\CurrentVersion\ContentDeliveryManage…| [x] Disable Edge promotional tabs & recommendations|
+|                                       | [x] Disable 'set Edge as default' popup            |
 +---------------------------------------+----------------------------------------------------+
 | up/down move  Tab pane  Enter toggle  ? help  x apply  q quit                              |
 | space to toggle, p to preview, x to apply; nothing changes until you confirm               |
@@ -77,7 +77,6 @@ engine's own plan renderer, and applying hands the chosen ids back to the engine
      [MED ] Hide Settings home page promos
 
    Total actions : 74
-   Highest risk  : high
 ```
 
 Applying it — a progress counter, and one status vocabulary where the text marker
@@ -106,7 +105,7 @@ WinCleanKit is built the other way round:
 | Principle | What it means in practice |
 |---|---|
 | **You decide** | The basics are on to start with; everything else is one toggle away. Nothing runs that you did not select. |
-| **You see it first** | Every action carries a plain-language *why*, a risk level, and a preview step. |
+| **You see it first** | Every action carries a plain-language *why* — what it changes and what it costs — and a preview step. |
 | **You can always go back** | Each run writes a timestamped backup plus a self-contained restore script to your Desktop. |
 | **Already-downloaded images are images, not settings** | It deletes ad images but refuses to touch your wallpaper. |
 | **Your data is not its business** | It never modifies `hosts`, never touches personal files, and never goes near your OneDrive data folder. |
@@ -146,8 +145,8 @@ exactly those checked. Everything else is opt-in:
 
 Nothing is ever added back. Turning an action off leaves it off, and turning one on
 is a single `space` — there is no tier to re-apply that would undo either. The split
-is enforced by `tests/Test-Catalog.ps1`, which also asserts that no high-risk action
-is on by default.
+is enforced by `tests/Test-Catalog.ps1`, which also asserts that nothing that
+uninstalls software is on by default.
 
 ---
 
@@ -198,7 +197,7 @@ Full parameter reference: [docs/USAGE.md](docs/USAGE.md).
 | Privacy hardening | 9 | advertising ID, input personalization, implicit text/ink collection, location, settings sync |
 | Ad image cache & wallpaper | 1 | delete downloaded Spotlight ad images |
 
-Every action documents its risk, its trade-off, and why it exists. Browse the whole list in [docs/CATALOG.md](docs/CATALOG.md).
+Every action documents what it changes, what it costs, and why it exists. Browse the whole list in [docs/CATALOG.md](docs/CATALOG.md).
 
 ### Deliberately out of scope
 
@@ -280,7 +279,7 @@ colour roles, so the front-end and the engine read as one product.
 
 ## Contributing
 
-Adding an action is usually a small JSON change. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first — it explains the risk levels, the default-selection rule, and what a good `why` string looks like.
+Adding an action is usually a small JSON change. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first — it explains the default-selection rule and what a good `why` string looks like.
 
 ```powershell
 # Syntax gate: the PowerShell parser plus the file-encoding rules

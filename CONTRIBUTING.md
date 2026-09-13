@@ -32,18 +32,9 @@ Append an object to `actions` in `catalog/catalog.json`.
 | `id` | `category.something-specific`. Stable forever — it is what users type in `-Only` and what restore logs reference. Never rename an existing id; add a new one. |
 | `category` | Must match a `categories[].id`. |
 | `target` | `registry` · `service` · `task` · `appx` · `path-clean` · `onedrive` |
-| `risk` | `low` · `medium` · `high` — see below. |
 | `title` / `title_zh` | Imperative and specific. "Disable X", not "Optimise X". |
 | `why` / `why_zh` | **One sentence saying what it does and what it costs.** This is the user's only basis for deciding. A weak `why` is a broken action. |
 | `default` | `true` only for the low-trade-off actions that are selected when the tool starts. Anything that uninstalls software, or carries a visible trade-off, must be `false`. |
-
-### Risk levels
-
-| Level | Use it when |
-|---|---|
-| `low` | The change is a preference or stops a background collector, with no visible behaviour change. |
-| `medium` | Something visible changes, a convenience feature stops working, or cached content is deleted. Say what in `why`. |
-| `high` | A program is removed or a capability is blocked. |
 
 ### Target-specific fields
 
@@ -71,7 +62,7 @@ The test suite rejects a pull request that breaks any of these:
 1. `id` values are unique.
 2. Every `category` reference resolves.
 3. Every action has both languages and a `default` flag.
-4. No high-risk action and nothing that uninstalls software is `default: true`.
+4. Nothing that uninstalls software is `default: true`.
 5. No action targets the `hosts` file.
 6. No action disables an update or core diagnostic service (`wuauserv`, `UsoSvc`, `BITS`, `DoSvc`, `DPS`).
 7. No action deletes `TranscodedWallpaper` or the wallpaper cache.

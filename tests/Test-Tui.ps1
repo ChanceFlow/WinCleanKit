@@ -6,7 +6,7 @@
     src/lib/Tui.Logic.ps1 is pure functions over a plain hashtable, so the parts of
     the interactive UI that can be decided without a terminal are tested here:
     cursor movement and clamping, mode switching, the default selection, selection
-    toggling, group and whole-catalog selection, risk reporting, the plan the UI
+    toggling, group and whole-catalog selection, the plan the UI
     hands to the engine, and the scroll-window math.
 
     What this cannot cover, and does not pretend to: the key loop itself. Reading
@@ -117,15 +117,12 @@ $nDefault = @($cat.actions | Where-Object { $_.default }).Count
 $st = Initialize-TuiState -Catalog $cat
 Check 'opens with the catalog default set' ($st.Selected.Count -eq $nDefault) ("{0} vs {1}" -f $st.Selected.Count, $nDefault)
 # Not "a minority": the default set is deliberately the cautious 45. What matters is
-# that nothing risky is in it, and that it is useful out of the box rather than a
-# token selection from one category.
-$defaultRisky = @($cat.actions | Where-Object { $_.default -and $_.risk -eq 'high' })
-Check 'no high-risk action is on by default' ($defaultRisky.Count -eq 0) (($defaultRisky | ForEach-Object { $_.id }) -join ', ')
-# Removing a program is never on by default: the default set is preferences and
-# background collectors only, so "uninstall something" always takes a deliberate
-# click. This is the line the whole risk model rests on.
+# that nothing destructive is in it, and that it is useful out of the box rather than
+# a token selection from one category.
 $defaultDestructive = @($cat.actions | Where-Object { $_.default -and $_.target -in 'appx', 'onedrive' })
 Check 'nothing that uninstalls software is on by default' ($defaultDestructive.Count -eq 0) (($defaultDestructive | ForEach-Object { $_.id }) -join ', ')
+# Removing a program is never on by default: the default set is preferences and
+# background collectors only, so "uninstall something" always takes a deliberate click.
 # Recorded rather than asserted loosely: if the default set changes, that is a
 # decision to make on purpose, not something to discover from a diff.
 $defaultCats = @($cat.actions | Where-Object { $_.default } | ForEach-Object { $_.category } | Select-Object -Unique | Sort-Object)
@@ -171,16 +168,6 @@ Check 'select all fills the selection' ((Get-TuiSelectedCount $st) -eq $cat.acti
 Check 'plan covers the catalog when all selected' ((Get-TuiPlan $st).Count -eq $cat.actions.Count)
 
 # ---------------------------------------------------------------------------
-Write-Head 'risk reporting'
-$st = Initialize-TuiState -Catalog $cat
-$rDefault = Get-TuiHighestRisk $st
-$st = Switch-TuiAllSelection -State $st -Selected $true
-$rAll = Get-TuiHighestRisk $st
-Check 'the default risk is at most the whole-catalog risk' ($rDefault -le $rAll) ("{0} <= {1}" -f $rDefault, $rAll)
-Check 'selecting everything reaches high' ($rAll -eq 3)
-$st = Switch-TuiAllSelection -State $st -Selected $false
-Check 'empty selection reports no risk' ((Get-TuiHighestRisk $st) -eq 0)
-
 # ---------------------------------------------------------------------------
 Write-Head 'plan handed to the engine'
 $st = Initialize-TuiState -Catalog $cat

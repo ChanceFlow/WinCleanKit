@@ -34,11 +34,6 @@ $outPath = Join-Path $root 'docs/CATALOG.md'
 if (-not (Test-Path $catalogPath)) { throw "catalog not found: $catalogPath" }
 $cat = Get-Content $catalogPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
-$riskLabel = @{
-    low    = '🟢 low / 低'
-    medium = '🟡 medium / 中'
-    high   = '🔴 high / 高'
-}
 $L = New-Object System.Collections.Generic.List[string]
 function Add-Line([string]$Text = '') { [void]$L.Add($Text) }
 
@@ -54,18 +49,10 @@ Add-Line '# Action catalog'
 Add-Line ''
 Add-Line ('**{0} actions across {1} categories.** Generated from [`catalog/catalog.json`](../catalog/catalog.json).' -f $cat.actions.Count, $cat.categories.Count)
 Add-Line ''
-Add-Line 'Every action appears below with its English and Chinese text, its risk level, and'
+Add-Line 'Every action appears below with its English and Chinese text, what it changes, and'
 Add-Line 'whether it is part of the default selection. `default` marks the small, low-trade-off'
 Add-Line 'set the tool checks when it starts; everything else is opt-in and nothing re-adds an'
-Add-Line 'action you have turned off.'
-Add-Line ''
-Add-Line '## Risk levels'
-Add-Line ''
-Add-Line '| Level | Meaning |'
-Add-Line '|---|---|'
-Add-Line '| 🟢 **low / 低** | Reversible preference or a background collector that stops, with no visible change to daily use. |'
-Add-Line '| 🟡 **medium / 中** | A visible trade-off: a UI element disappears, a convenience feature stops working, or cached content is deleted. |'
-Add-Line '| 🔴 **high / 高** | Removes a program or blocks a capability. Never part of the default selection. |'
+Add-Line 'action you have turned off. Each action''s `why` string is where the trade-off is stated.'
 Add-Line ''
 $defaultCount = @($cat.actions | Where-Object { $_.default }).Count
 Add-Line '## Default selection'
@@ -90,7 +77,7 @@ foreach ($c in $cat.categories) {
         Add-Line ('**{0}**' -f $a.title_zh)
         Add-Line ''
         $isDefault = if ($a.default) { 'yes / 是' } else { 'no / 否' }
-        Add-Line ('- **Risk / 风险:** {0}  ·  **Target / 类型:** `{1}`  ·  **Default / 默认:** {2}' -f $riskLabel[$a.risk], $a.target, $isDefault)
+        Add-Line ('- **Target / 类型:** `{0}`  ·  **Default / 默认:** {1}' -f $a.target, $isDefault)
         Add-Line ('- **Why / 为什么:** {0}' -f $a.why)
         Add-Line ('- **代价 / Cost:** {0}' -f $a.why_zh)
 
@@ -145,9 +132,9 @@ $zh = New-Object System.Collections.Generic.List[string]
 [void]$zh.Add('')
 [void]$zh.Add(('本项目的 {0} 条操作分布在 {1} 个分类中，完整清单见 **[CATALOG.md](CATALOG.md)**。' -f $cat.actions.Count, $cat.categories.Count))
 [void]$zh.Add('')
-[void]$zh.Add('那份目录**本身就是双语的**：每条操作都同时给出中文与英文的标题、说明与代价，以及风险等级和是否为默认勾选，因此不需要、也不应该再维护第二份副本 —— 两份文档必然会逐渐不一致。')
+[void]$zh.Add('那份目录**本身就是双语的**：每条操作都同时给出中文与英文的标题、说明与代价，以及是否为默认勾选，因此不需要、也不应该再维护第二份副本 —— 两份文档必然会逐渐不一致。')
 [void]$zh.Add('')
-[void]$zh.Add('如果你在找某个具体动作，直接看 [CATALOG.md](CATALOG.md)；想按分类和风险快速浏览，[README.zh-CN.md](../README.zh-CN.md) 里有汇总表。')
+[void]$zh.Add('如果你在找某个具体动作，直接看 [CATALOG.md](CATALOG.md)；想按分类快速浏览，[README.zh-CN.md](../README.zh-CN.md) 里有汇总表。')
 [void]$zh.Add('')
 [void]$zh.Add('---')
 [void]$zh.Add('')

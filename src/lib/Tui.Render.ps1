@@ -11,8 +11,7 @@
     Frame layout (width x height, minimum 60x18):
 
         +----------------------------------------------------------------+
-        | WinCleanKit  v0.1.0   45 of 74 selected                |  header
-        | highest risk: medium                                          |
+        | WinCleanKit  v0.1.0   plan: 45 actions                        |  header
         +--------------------------------+-----------------------------+
         | > 20/22 系统广告与推荐          | [ ] 禁止静默自动安装应用     |  body
         |   21/21 遥测与诊断数据          |                             |
@@ -196,18 +195,12 @@ function Get-TuiFrame {
     # ---- header -----------------------------------------------------------
     $title = if ($zh) { 'WinCleanKit' } else { 'WinCleanKit' }
     $planLabel   = if ($zh) { '计划' } else { 'plan' }
-    $riskNames   = if ($zh) { @('无', '低', '中', '高') } else { @('none', 'low', 'medium', 'high') }
-    $risk = Get-TuiHighestRisk $State
     $count = Get-TuiSelectedCount $State
-
-    $riskText = if ($zh) { "最高风险: $($riskNames[$risk])" } else { "highest risk: $($riskNames[$risk])" }
     $planText = "{0}: {1} {2}" -f $planLabel, $count, $(if ($zh) { '项' } else { 'actions' })
 
     [void]$lines.Add('+' + ('-' * $inner) + '+')
     $row1 = " {0} v{1}   {2}" -f $title, $Version, $planText
-    $row2 = " {0}" -f $riskText
     [void]$lines.Add('|' + (Format-TuiCell $row1 $inner) + '|')
-    [void]$lines.Add('|' + (Format-TuiCell $row2 $inner) + '|')
     [void]$lines.Add('+' + ('-' * $inner) + '+')
 
     # ---- body -------------------------------------------------------------
@@ -220,10 +213,10 @@ function Get-TuiFrame {
     $rightW = $inner - $leftW - 1
     # A frame must be exactly as tall as the terminal, no taller: one extra row
     # makes the alternate screen buffer scroll on every repaint, which reads as
-    # the whole interface jumping. The fixed rows are the header (rule + two rows
-    # + rule = 4), the two body rules, the key line, the status line and the
-    # footer rule = 9.
-    $bodyH  = $h - 9
+    # the whole interface jumping. The fixed rows are the header (rule + one row +
+    # rule = 3), the two body rules, the key line, the status line and the footer
+    # rule = 8.
+    $bodyH  = $h - 8
     if ($bodyH -lt 6) { $bodyH = 6 }
 
     # Border rows for the body. The two-pane view needs a junction in the middle
@@ -311,7 +304,6 @@ function Get-TuiBody {
     $fill = $LeftWidth - (Get-TuiWidth $label)
     [void]$detailLines.Add($label + ('-' * [Math]::Max(0, $fill)))
 
-    $riskNames = if ($zh) { @{ low = '低'; medium = '中'; high = '高' } } else { @{ low = 'low'; medium = 'medium'; high = 'high' } }
     $rows = [Math]::Max(2, $detailH - 1)
 
     if ($isListPane) {
@@ -321,8 +313,7 @@ function Get-TuiBody {
             $g = $State.Groups[$State.ListIndex]
             $catObj = @($State.Catalog.categories | Where-Object { $_.id -eq $g.id })[0]
             $catName = if ($zh -and $catObj.PSObject.Properties.Name -contains 'name_zh' -and $catObj.name_zh) { $catObj.name_zh } else { $catObj.name }
-            $catRisk = if ($catObj.PSObject.Properties.Name -contains 'risk' -and $catObj.risk) { $riskNames[$catObj.risk] } else { $riskNames['low'] }
-            $catTitle = if ($zh) { "[分类] {0}   [{1}]" -f $catName, $catRisk } else { "[category] {0}   [{1}]" -f $catName, $catRisk }
+            $catTitle = if ($zh) { "[分类] {0}" -f $catName } else { "[category] {0}" -f $catName }
             $selCount = 0
             foreach ($a in $State.Catalog.actions) {
                 if ($a.category -eq $g.id -and $State.Selected.ContainsKey($a.id)) { $selCount++ }
@@ -344,7 +335,7 @@ function Get-TuiBody {
         $cur = Get-TuiActionAt $State
         if ($cur) {
             $targetLabel = if ($zh) { '触及: ' } else { 'Touches: ' }
-            $title = "{0}   [{1}]" -f (Get-TuiText -Object $cur -Base 'title' -Language $State.Language), $riskNames[$cur.risk]
+            $title = Get-TuiText -Object $cur -Base 'title' -Language $State.Language
             $titleLines = Get-TuiWrap -Text $title -Width $LeftWidth -Max 2
 
             $rest = [Math]::Max(2, $rows - $titleLines.Count)

@@ -47,7 +47,7 @@ The restore script reverses registry values exactly, restores service start type
 1. **Check your organisation's policy.** On a managed or domain-joined PC, some settings may be enforced by Group Policy; your changes may be reverted at the next policy refresh, or may conflict with your IT department's management. WinCleanKit does not detect this.
 2. **Know what you use.** If you rely on Game Bar recording, Phone Link, the new Outlook, Sticky Notes, Microsoft To Do, or OneDrive, leave those actions off. None of them is in the default selection, and each is individually skippable.
 3. **Take your own backup first** if the machine matters. A system image or restore point is a stronger guarantee than a settings journal.
-4. **Read the plan.** The preview shows every action with its risk level and its reason. It takes thirty seconds.
+4. **Read the plan.** The preview shows every action and its reason. It takes thirty seconds.
 
 ## Verify before you trust
 

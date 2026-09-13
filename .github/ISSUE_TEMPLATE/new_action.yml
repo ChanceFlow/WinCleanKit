@@ -28,14 +28,15 @@ body:
     validations:
       required: true
   - type: dropdown
-    id: risk
+    id: default
     attributes:
-      label: Suggested risk level
-      description: See CONTRIBUTING.md for the definitions.
+      label: Should this be on by default?
+      description: |
+        Only low-trade-off preference and background-collector changes may be.
+        Anything that uninstalls software, or has a visible cost, must be opt-in.
       options:
-        - low — no visible behaviour change
-        - medium — something visible changes or cached content is deleted
-        - high — removes a program or blocks a capability
+        - 'No — opt-in (the usual answer)'
+        - 'Yes — a preference or a background collector, with no visible cost'
     validations:
       required: true
   - type: textarea

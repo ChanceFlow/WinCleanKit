@@ -147,7 +147,7 @@ A `[FAIL]` for a single action does not abort the run; it is recorded as protect
 ## Reading the output
 
 ```
-[low ] Disable DiagTrack service                      <- risk level
+Disable DiagTrack service                            <- what it does
   [ OK ] DiagTrack service — Disabled -> Disabled      <- applied
   [skip ] Media Player — not installed                 <- nothing to do
  [WARN] Settings home — key accepted the write but dropped it   <- protected key

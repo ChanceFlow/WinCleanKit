@@ -213,13 +213,6 @@ exit /b %ERRORLEVEL%
 if /i "%WCK_UILANG%"=="zh" (set "WCK_TOOLANG=zh") else (set "WCK_TOOLANG=en")
 exit /b 0
 
-:riskzh
-set "WCK_RISKTXT="
-if "%~1"=="1" set "WCK_RISKTXT=低"
-if "%~1"=="2" set "WCK_RISKTXT=中"
-if "%~1"=="3" set "WCK_RISKTXT=高"
-exit /b 0
-
 :saveans
 if defined WCK_ANS set "WCK_ANS=%WCK_ANS:|=/%"
 exit /b 0
@@ -306,10 +299,6 @@ set "C_MUTED=[90m"
 set "C_WARN=[93m"
 exit /b 0
 
-:legend
-echo   %C_MUTED%风险等级:  低 = 可逆、无副作用     中 = 有可见取舍     高 = 会删除程序或数据%C_RESET%
-exit /b 0
-
 :header
 rem Everything is inlined on purpose. The first render of this header happens
 rem inside the for /f subprocess that reads the menu data, and calling a label
@@ -321,7 +310,6 @@ echo   %C_BRAND%----------------------------------------------------------------
 echo   %C_ACCENT%WinCleanKit%C_RESET%   Windows 11 广告 / 遥测 / 预装清理
 echo   %C_BRAND%--------------------------------------------------------------------%C_RESET%
 echo   %C_MUTED%语言: %C_RESET%%WCK_UILANG%
-echo   %C_MUTED%风险等级:  低 = 可逆、无副作用     中 = 有可见取舍     高 = 会删除程序或数据%C_RESET%
 exit /b 0
 
 rem ===========================================================================
@@ -333,8 +321,8 @@ if defined WCK_EOF exit /b 0
 set "WCK_CAT=%~1"
 call :header
 call :toolang
-for /f "usebackq tokens=1,2,3,4 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode cat -Category "%WCK_CAT%"`) do (
-    if "%%D"=="1" (echo     [x] %%B   [%%C]) else (echo     [ ] %%B   [%%C])
+for /f "usebackq tokens=1,2,3 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode cat -Category "%WCK_CAT%"`) do (
+    if "%%C"=="1" (echo     [x] %%B) else (echo     [ ] %%B)
 )
 echo.
 echo     T. 切换本类全部
@@ -346,11 +334,11 @@ if /i "%WCK_ANS%"=="t" (
     rem If the whole category is currently on, turn it off; otherwise turn it on.
     set "WCK_CATON=0"
     set "WCK_CATOFF=0"
-    for /f "usebackq tokens=1,4 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode cat -Category "%WCK_CAT%"`) do (
+    for /f "usebackq tokens=1,3 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode cat -Category "%WCK_CAT%"`) do (
         if "%%B"=="1" set /a WCK_CATON+=1
         if not "%%B"=="1" set /a WCK_CATOFF+=1
     )
-    for /f "usebackq tokens=1,4 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode cat -Category "%WCK_CAT%"`) do (
+    for /f "usebackq tokens=1,3 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode cat -Category "%WCK_CAT%"`) do (
         if !WCK_CATOFF! GTR 0 (
             rem turn all on
             if "%%B"=="0" (
@@ -383,13 +371,9 @@ echo.
 echo   --------------------------------------------------------------------
 echo     按分类选择
 echo   --------------------------------------------------------------------
-for /f "usebackq tokens=1,2,3,4 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode main`) do (
+for /f "usebackq tokens=1,2,3 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode main`) do (
     if not "%%A"=="TOTAL" (
-        set "WCK_RISKTXT="
-        if "%%D"=="1" set "WCK_RISKTXT=低"
-        if "%%D"=="2" set "WCK_RISKTXT=中"
-        if "%%D"=="3" set "WCK_RISKTXT=高"
-        if "%%C" GTR 0 (echo     [x] %%A  %%B   [!WCK_RISKTXT!]  已选 %%C 项) else (echo     [ ] %%A  %%B   [!WCK_RISKTXT!]  已选 %%C 项)
+        if "%%C" GTR 0 (echo     [x] %%A  %%B   已选 %%C 项) else (echo     [ ] %%A  %%B   已选 %%C 项)
     )
 )
 echo.
@@ -399,7 +383,7 @@ echo.
 call :ask "  代号 / B: "
 if /i "%WCK_ANS%"=="b" exit /b 0
 set "WCK_FOUNDCAT=0"
-for /f "usebackq tokens=1,3,4 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode main`) do (
+for /f "usebackq tokens=1 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode main`) do (
     if /i "%%A"=="%WCK_ANS%" set "WCK_FOUNDCAT=1"
 )
 if "%WCK_FOUNDCAT%"=="1" call :menu_cat "%WCK_ANS%"
@@ -417,8 +401,8 @@ echo.
 echo   --------------------------------------------------------------------
 echo     逐项自定义   [x]=执行  [ ]=跳过
 echo   --------------------------------------------------------------------
-for /f "usebackq tokens=1,2,3,4,5,6 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode items`) do (
-    if "%%F"=="1" (echo     [x] %%A. %%C   [%%D]) else (echo     [ ] %%A. %%C   [%%D])
+for /f "usebackq tokens=1,2,3,4,5 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode items`) do (
+    if "%%E"=="1" (echo     [x] %%A. %%C) else (echo     [ ] %%A. %%C)
 )
 echo.
 echo     输入编号切换该项;  A. 全部选中此项;  N. 全部取消;  B. 返回
@@ -435,7 +419,7 @@ if /i "%WCK_ANS%"=="n" (
 )
 set "WCK_PICKID="
 set "WCK_PICKSEL="
-for /f "usebackq tokens=1,2,6 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode items`) do (
+for /f "usebackq tokens=1,2,5 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode items`) do (
     if "%%A"=="%WCK_ANS%" (
         set "WCK_PICKID=%%B"
         set "WCK_PICKSEL=%%C"
@@ -461,12 +445,8 @@ rem ===========================================================================
 rem  Summary bar
 rem ===========================================================================
 :summarybar
-for /f "usebackq tokens=1,2,3,4,5 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode summary`) do (
-    set "WCK_RISKTXT="
-    if "%%C"=="1" set "WCK_RISKTXT=低"
-    if "%%C"=="2" set "WCK_RISKTXT=中"
-    if "%%C"=="3" set "WCK_RISKTXT=高"
-    echo     当前计划: 共 %%B 项, 最高风险 [!WCK_RISKTXT!]   ^(手动加 %%D / 手动减 %%E^)
+for /f "usebackq tokens=1,2,3,4 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode summary`) do (
+    echo     当前计划: 共 %%B 项   ^(手动加 %%C / 手动减 %%D^)
 )
 exit /b 0
 
@@ -499,12 +479,8 @@ rem ===========================================================================
 :do_apply
 call :header
 call :toolang
-for /f "usebackq tokens=1,2,3,4,5 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode summary`) do (
-    set "WCK_RISKTXT="
-    if "%%C"=="1" set "WCK_RISKTXT=低"
-    if "%%C"=="2" set "WCK_RISKTXT=中"
-    if "%%C"=="3" set "WCK_RISKTXT=高"
-    echo     即将执行: 共 %%B 项, 最高风险 [!WCK_RISKTXT!]
+for /f "usebackq tokens=1,2 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode summary`) do (
+    echo     即将执行: 共 %%B 项
 )
 echo.
 echo     --------------------------------------------------------------------

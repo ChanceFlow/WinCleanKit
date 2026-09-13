@@ -10,7 +10,7 @@ All notable changes to this project are documented here. The format follows
 - **Dual-modal detail panel and comprehensive catalog descriptions.** The detail
   panel adapts to the active pane: selecting a category on the left presents the
   category's scope, overview, and selection count, while selecting an action on the
-  right presents that action's rationale, presets membership, and technical target.
+  right presents that action's rationale, default membership, and technical target.
   All 74 actions across all 6 categories in `catalog/catalog.json` and `docs/CATALOG.md`
   were expanded with thorough explanations (behavior, debloat rationale, trade-offs/side
   effects, and reversibility), replacing previous terse one-liners.
@@ -29,11 +29,11 @@ All notable changes to this project are documented here. The format follows
   scroll, so a clean result cannot come from a test that detects nothing.
 - **A full-screen TUI.** The interactive interface is now a keyboard-driven,
   panel-based application instead of a numbered menu: a header showing the armed
-  plan and its highest risk, a category pane with per-category selected counts, an
+  plan and its size, a category pane with per-category selected counts, an
   action pane with checkboxes, a detail pane that states what the focused action
   touches, and a key/status footer.
   - Arrow keys move, `Tab` switches panes, `space` toggles, `Enter` opens a
-    category and steps down, `1`/`2`/`3` switch preset, `a`/`n`/`A`/`N` select by
+    category and steps down, `a`/`n`/`A`/`N` select by
     category or wholesale, `l` switches language, `p` previews, `x` applies,
     `?` shows in-app help.
   - It draws into the alternate screen buffer, so the terminal scrollback survives
@@ -43,7 +43,7 @@ All notable changes to this project are documented here. The format follows
 - **`--simple`** (and `-Tui:$false`) keeps the previous numbered menu, for
   automation, screen readers, and terminals without ANSI support.
 - **Two new test gates.** `tests/Test-Tui.ps1` (57 checks) covers the navigation,
-  selection, preset, risk and scroll-window logic; `tests/Test-TuiRender.ps1`
+  selection and scroll-window logic; `tests/Test-TuiRender.ps1`
   (54 checks) covers the frame geometry, pane borders, checkbox rendering, the help
   screen, and that rendering never mutates state.
 - `src/lib/Tui.Logic.ps1`, `src/lib/Tui.Render.ps1`, `src/lib/Tui.Input.ps1`.
@@ -122,6 +122,22 @@ All notable changes to this project are documented here. The format follows
 - The `origin` remote points at the public GitHub URL. The internal Gitea mirror is
   a separate remote named `gitea`, so a clone never reveals an internal address
   through `git remote -v`.
+
+### Removed
+- **The risk level, everywhere.** Every action used to carry a `低` / `中` / `高`
+  label, the catalog stored it in a `risk` field, the TUI printed it beside each
+  action and named the highest one in the header, the generated catalog had a risk
+  table, and the docs asked you to read it before choosing. It was noise. The
+  levels restated the same three tiers the presets imposed, and they were not a
+  measurement — a label that says "medium" without saying medium *of what* is a
+  number dressed up as a judgement, and it pushed people to defer to it instead of
+  reading the sentence next to it. The `risk` field, the `低`/`中`/`高` rendering,
+  the highest-risk header line and the per-action tag are all gone rather than
+  merely unrendered; what each action does to your machine is stated in its
+  description and its `touches` target, which is the part that was always doing the
+  work. Removing the field from the catalog is checked by
+  `tests/Test-Catalog.ps1` ("the risk field is gone from every action") so it
+  cannot creep back in through a catalog edit.
 
 ### Fixed
 - **The whole interface sat one row too high and jumped on every keypress.**
@@ -215,9 +231,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Notes
 - The batch fixes above were verified on Windows PowerShell 5.1 / Windows 11 by
-  driving the numbered menu from a scripted input file: quit, about, each preset,
-  the language toggle, category selection, per-item selection, preview,
-  apply-cancel, apply-confirm and restore all exit 0 with no cmd error text, in
+  driving the numbered menu from a scripted input file: quit, about, the language
+  toggle, category selection, per-item selection, preview, apply-cancel,
+  apply-confirm and restore all exit 0 with no cmd error text, in
   both call styles (`run.bat` and the inner `WinCleanKit.bat`, relative and
   absolute). All eight gates pass.
 - `tests/Test-Parse.ps1` gained five checks that pin the batch launcher rules:

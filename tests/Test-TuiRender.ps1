@@ -94,7 +94,7 @@ Check 'header carries no preset' ((@($frame | Where-Object { $_ -match 'preset|é
 $st = Switch-TuiAllSelection -State $st -Selected $false
 $frame = Get-TuiFrame -State $st -Width 110 -Height 32
 Check 'clearing updates the count' ((@($frame | Where-Object { $_ -match 'plan: 0 actions' }).Count) -eq 1)
-Check 'clearing drops the risk to none' ((@($frame | Where-Object { $_ -match 'highest risk: none' }).Count) -eq 1)
+Check 'clearing the selection is reflected in the header' ((@($frame | Where-Object { $_ -match 'plan: 0 actions' }).Count) -eq 1)
 
 # ---------------------------------------------------------------------------
 Write-Head 'the detail panel describes the focused action'
@@ -130,7 +130,7 @@ function Get-LeftWidth { param([int]$Width) [Math]::Max(24, [int](($Width - 2) *
 function Get-DetailPanelRow {
     # The panel's first row is its labelled divider. That row depends only on the
     # terminal size, which is exactly what "the panel never moves" means. Anchoring
-    # on the risk tag instead would drift: a long title wraps, so the tag moves
+    # on a tag inside the panel instead would drift: a long title wraps, so it moves
     # inside the panel even though the panel itself does not.
     param([string[]]$Frame, [int]$LeftWidth)
     for ($i = 0; $i -lt $Frame.Count; $i++) {

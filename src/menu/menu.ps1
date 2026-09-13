@@ -11,11 +11,12 @@
     plus/minus choice files and reports what the plan currently looks like.
 
 .OUTPUT FORMAT
-    show   :  id|name|count|risk      (one line per category)  then  TOTAL|n
-    cat    :  id|title|risk|sel       (one line per action in that category)
-    items  :  n|id|title|risk|cat|sel (numbered list across everything)
-    sel    :  id                    (one line per effectively-selected action)
-    line   :  summary|actions|risk|plus|minus
+    cats   :  id|name|count          (one line per category)
+    main   :  id|name|count          then  TOTAL|n
+    cat    :  id|title|sel           (one line per action in that category)
+    items  :  n|id|title|cat|sel     (numbered list across everything)
+    sel    :  id                     (one line per effectively-selected action)
+    line   :  summary|actions|plus|minus
 #>
 [CmdletBinding()]
 param(
@@ -35,13 +36,13 @@ $catalogPath = Join-Path $root 'catalog/catalog.json'
 if (-not (Test-Path $catalogPath)) { throw "catalog.json not found at $catalogPath" }
 $catalog = Get-Content $catalogPath -Raw -Encoding UTF8 | ConvertFrom-Json
 
-$riskOrder = @{ low = 1; medium = 2; high = 3 }
-$riskLabel = if ($Lang -eq 'zh') { @{ low = '低'; medium = '中'; high = '高' } }
-             else                { @{ low = 'low'; medium = 'MED'; high = 'HIGH' } }
+# Bound once and read by L(). Naming it here keeps the dependency visible to a reader
+# and to PSScriptAnalyzer, which cannot see a nested function closing over $Lang.
+$script:MenuLang = $Lang
 
 function L {
     param($Object, [string]$Base = 'title')
-    if ($Lang -eq 'zh') {
+    if ($script:MenuLang -eq 'zh') {
         $alt = "${Base}_zh"
         if ($Object.PSObject.Properties.Name -contains $alt -and $Object.$alt) { return $Object.$alt }
     }
@@ -76,30 +77,23 @@ switch ($Mode) {
     'cats' {
         foreach ($c in $catalog.categories) {
             $n = @($catalog.actions | Where-Object { $_.category -eq $c.id -and $effective.Contains($_.id) }).Count
-            '{0}|{1}|{2}|{3}' -f $c.id, (L $c 'name'), $n, $c.risk
+            '{0}|{1}|{2}' -f $c.id, (L $c 'name'), $n
         }
     }
 
     'main' {
         foreach ($c in $catalog.categories) {
             $n = @($catalog.actions | Where-Object { $_.category -eq $c.id -and $effective.Contains($_.id) }).Count
-            '{0}|{1}|{2}|{3}' -f $c.id, (L $c 'name'), $n, $c.risk
+            '{0}|{1}|{2}' -f $c.id, (L $c 'name'), $n
         }
-        $maxRisk = 0
-        foreach ($a in $catalog.actions) {
-            if ($effective.Contains($a.id)) {
-                $r = $riskOrder[$a.risk]
-                if ($r -gt $maxRisk) { $maxRisk = $r }
-            }
-        }
-        'TOTAL|{0}|{1}' -f $effective.Count, $maxRisk
+        'TOTAL|{0}' -f $effective.Count
     }
 
     'cat' {
         foreach ($a in $catalog.actions) {
             if ($a.category -ne $Category) { continue }
             $sel = if ($effective.Contains($a.id)) { 1 } else { 0 }
-            '{0}|{1}|{2}|{3}' -f $a.id, (L $a 'title'), $riskLabel[$a.risk], $sel
+            '{0}|{1}|{2}' -f $a.id, (L $a 'title'), $sel
         }
     }
 
@@ -108,7 +102,7 @@ switch ($Mode) {
         foreach ($a in $catalog.actions) {
             $i++
             $sel = if ($effective.Contains($a.id)) { 1 } else { 0 }
-            '{0}|{1}|{2}|{3}|{4}|{5}' -f $i, $a.id, (L $a 'title'), $riskLabel[$a.risk], $a.category, $sel
+            '{0}|{1}|{2}|{3}|{4}' -f $i, $a.id, (L $a 'title'), $a.category, $sel
         }
     }
 
@@ -119,13 +113,6 @@ switch ($Mode) {
     }
 
     'summary' {
-        $maxRisk = 0
-        foreach ($a in $catalog.actions) {
-            if ($effective.Contains($a.id)) {
-                $r = $riskOrder[$a.risk]
-                if ($r -gt $maxRisk) { $maxRisk = $r }
-            }
-        }
-        'summary|{0}|{1}|{2}|{3}' -f $effective.Count, $maxRisk, $plus.Count, $minus.Count
+        'summary|{0}|{1}|{2}' -f $effective.Count, $plus.Count, $minus.Count
     }
 }

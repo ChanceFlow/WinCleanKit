@@ -179,27 +179,6 @@ function Test-TuiSelected {
     return $State.Selected.ContainsKey($Id)
 }
 
-function Get-TuiHighestRisk {
-    <#
-      Highest risk among the selected actions, as a rank: 0 none, 1 low, 2 medium, 3 high.
-      Used for the header, so the user always sees how much damage is armed.
-    #>
-    [CmdletBinding()]
-    param($State)
-    $order = @{ low = 1; medium = 2; high = 3 }
-    $max = 0
-    foreach ($a in $State.Catalog.actions) {
-        if (-not $State.Selected.ContainsKey($a.id)) { continue }
-        $r = $order[$a.risk]
-        if ($r -gt $max) { $max = $r }
-    }
-    return $max
-}
-
-# --------------------------------------------------------------------------
-# Navigation
-# --------------------------------------------------------------------------
-
 function Move-TuiCursor {
     <#
       Move the focused cursor by one step. Clamps rather than wraps: in a list of

@@ -34,18 +34,9 @@ cd WinCleanKit
 | `id` | `category.something-specific`。**永久稳定** —— 用户会用它写 `-Only`，还原日志也引用它。不要重命名已有 id；新增一个。 |
 | `category` | 必须匹配某个 `categories[].id`。 |
 | `target` | `registry` · `service` · `task` · `appx` · `path-clean` · `onedrive` |
-| `risk` | `low` · `medium` · `high` —— 见下。 |
 | `title` / `title_zh` | 祈使句且具体。写「禁用 X」，不要写「优化 X」。 |
 | `why` / `why_zh` | **一句话说清它做什么、代价是什么。** 这是用户决策的唯一依据。`why` 写得含糊，等于这条动作是坏的。 |
 | `default` | 只有「取舍最小的、启动时默认勾选」的动作才是 `true`。任何会卸载软件、或带明显取舍的动作都必须是 `false`。 |
-
-### 风险等级
-
-| 等级 | 何时使用 |
-|---|---|
-| `low` | 只是偏好设置，或停掉一个后台采集器，日常使用无可感变化。 |
-| `medium` | 有可见变化、某个便利功能失效，或会删除缓存内容。请在 `why` 里说明。 |
-| `high` | 卸载程序或封禁某项能力。 |
 
 ### 按 target 的专属字段
 
@@ -73,7 +64,7 @@ cd WinCleanKit
 1. `id` 唯一。
 2. 每个 `category` 引用都能解析。
 3. 每个动作都有两种语言，并有 `default` 标记。
-4. 没有任何高风险动作、也没有任何卸载软件的动作是 `default: true`。
+4. 没有任何卸载软件的动作是 `default: true`。
 5. 没有动作针对 `hosts` 文件。
 6. 没有动作禁用更新或核心诊断服务（`wuauserv`、`UsoSvc`、`BITS`、`DoSvc`、`DPS`）。
 7. 没有动作删除 `TranscodedWallpaper` 或壁纸缓存。

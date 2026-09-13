@@ -92,7 +92,6 @@ $script:EngineVersion = '0.1.0'
 $script:Root          = Split-Path -Parent $PSScriptRoot
 $script:CatalogPath   = Join-Path $script:Root 'catalog/catalog.json'
 $script:Lang          = $Language
-$script:RiskOrder     = @{ low = 1; medium = 2; high = 3 }
 
 $script:CountOk   = 0
 $script:CountSkip = 0
@@ -136,9 +135,6 @@ $script:Ink = @{
     danger   = 'Red'         # real failure
     muted    = 'DarkGray'    # hints, paths, de-emphasised detail
     body     = 'Gray'        # default body text
-    riskLow  = 'DarkGray'
-    riskMed  = 'Yellow'
-    riskHigh = 'Red'
 }
 
 function Get-Width {
@@ -370,25 +366,11 @@ function Group-PlanByCategory {
     $groups
 }
 
-function Get-RiskInk {
-    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
-        Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
-    param([string]$Risk)
-    switch ($Risk) {
-        'low'    { return 'riskLow' }
-        'medium' { return 'riskMed' }
-        'high'   { return 'riskHigh' }
-        default  { return 'body' }
-    }
-}
-
 function Show-Plan {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '',
         Justification = 'Interactive console UI: coloured terminal output is the intended interface.')]
     param($Catalog, $Actions)
     $groups = Group-PlanByCategory -Catalog $Catalog -Actions $Actions
-    $totalRisk = ($Actions | ForEach-Object { $script:RiskOrder[$_.risk] } | Measure-Object -Maximum).Maximum
-    if (-not $totalRisk) { $totalRisk = 0 }
 
     foreach ($cid in $groups.Keys) {
         $cat = $Catalog.categories | Where-Object { $_.id -eq $cid }
@@ -401,19 +383,12 @@ function Show-Plan {
         Write-Ink ("  " + (Format-Text $catName $catPad)) 'accent' -NoNewline
         Write-Ink ("{0} action(s)" -f $items.Count) 'muted'
         foreach ($a in $items) {
-            $tag = switch ($a.risk) {
-                'low'    { 'low ' }
-                'medium' { 'MED ' }
-                'high'   { 'HIGH' }
-                default  { 'low ' }
-            }
-            Write-Ink ("    [$tag] ") (Get-RiskInk $a.risk) -NoNewline
+            Write-Ink ("    ") 'muted' -NoNewline
             Write-Ink (L $a 'title') 'body'
         }
     }
     Write-Host ''
     Write-Info ("Total actions : {0}" -f $Actions.Count)
-    Write-Info ("Highest risk  : {0}" -f @('none', 'low', 'medium', 'high')[$totalRisk])
 }
 
 # --------------------------------------------------------------------------

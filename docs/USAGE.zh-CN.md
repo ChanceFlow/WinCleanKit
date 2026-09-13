@@ -141,7 +141,7 @@ $last = Get-ChildItem "$env:USERPROFILE\Desktop\WinCleanKit-*" -Directory | Sort
 ## 怎么看输出
 
 ```
-[low ] Disable DiagTrack service                      <- 风险等级
+Disable DiagTrack service                            <- 它做什么
   [ OK ] DiagTrack service — Disabled -> Disabled      <- 已生效
   [skip ] Media Player — not installed                 <- 无需处理
  [WARN] Settings home — key accepted the write but dropped it   <- 受保护键
