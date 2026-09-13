@@ -10,16 +10,33 @@ rem
 rem  License: MIT
 rem ===========================================================================
 setlocal EnableExtensions EnableDelayedExpansion
-chcp 65001 >nul 2>&1
+rem The explicit <nul matters: chcp discards whatever is on the standard input
+rem stream when it runs, so a session whose input is a file or a pipe would lose
+rem its first lines -- the numbered menu then reads end-of-input immediately.
+rem chcp needs no input, so handing it the null device keeps the real stream
+rem intact. This is also why the interactive reads further down survive.
+chcp 65001 <nul >nul 2>&1
 title WinCleanKit
 
 rem This file lives in the src folder, so the repository root is its parent.
 rem The root is derived with the full-path modifier of a for variable rather than
 rem from the current directory, whose trailing backslash differs between a drive
-rem root and a subdirectory. Keep this comment free of parameter substitution
-rem syntax: cmd expands those even inside rem, which is a syntax error at parse.
-cd /d "%~dp0"
-for %%I in ("%~dp0..") do set "WCK_ROOT=%%~fI"
+rem root and a subdirectory.
+rem
+rem The script path is captured into a variable FIRST, before the working
+rem directory changes. cmd resolves a relative script name at the moment each
+rem parameter is expanded, by joining it with the *current* directory -- not the
+rem directory this file was called from. When run.bat calls the relative
+rem "src\WinCleanKit.bat", the first expansion of the directory part yields
+rem <root>\src\ while the current directory is still <root>; after the cd below,
+rem the same expansion would yield <root>\src\src\. Reading it once at the top
+rem removes that whole class of bug. Keep this comment free of parameter
+rem substitution syntax: cmd expands those even inside rem, and a stray one is a
+rem syntax error at parse time.
+set "WCK_SRC=%~dp0"
+set "WCK_BATSELF=%~f0"
+cd /d "%WCK_SRC%"
+for %%I in ("%WCK_SRC%..") do set "WCK_ROOT=%%~fI"
 set "WCK_ENGINE=%WCK_ROOT%\src\WinCleanKit.ps1"
 set "WCK_MENU=%WCK_ROOT%\src\menu\menu.ps1"
 set "WCK_TMP=%TEMP%\wck-%RANDOM%%RANDOM%"
@@ -49,7 +66,27 @@ if not defined WCK_PS (
     exit /b 1
 )
 
+rem Full path to the chosen host. Inside for /f backticks cmd keeps the quotes it
+rem sees around a command name and then looks for a file literally named
+rem "powershell.exe", so the unquoted full path is used there instead. Neither
+rem path below contains a space.
+if /i "%WCK_PS%"=="pwsh.exe" (
+    for %%P in (pwsh.exe) do set "WCK_PSFULL=%%~$PATH:P"
+) else (
+    set "WCK_PSFULL=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
+)
+if not defined WCK_PSFULL set "WCK_PSFULL=%WCK_PS%"
+
 rem --- elevation --------------------------------------------------------------
+rem The plain-menu switch is read before elevation because the elevated instance
+rem is a fresh process: anything not forwarded on its command line is lost, and a
+rem user who asked for the accessible menu should not be dropped into the
+rem full-screen one.
+set "WCK_SIMPLE="
+for %%A in (%*) do (
+    if /i "%%A"=="--simple" set "WCK_SIMPLE=1"
+    if /i "%%A"=="--no-tui" set "WCK_SIMPLE=1"
+)
 net session >nul 2>&1
 if errorlevel 1 (
     echo.
@@ -62,7 +99,9 @@ if errorlevel 1 (
         pause
         exit /b 1
     )
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%~f0' -Verb RunAs -ArgumentList '--elevated' -ErrorAction Stop" >nul 2>&1
+    set "WCK_ELEVARGS=--elevated"
+    if defined WCK_SIMPLE set "WCK_ELEVARGS=--elevated --simple"
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%WCK_BATSELF%' -Verb RunAs -ArgumentList '!WCK_ELEVARGS!' -ErrorAction Stop" >nul 2>&1
     if errorlevel 1 (
         echo   [X] Could not elevate. Nothing was changed.
         echo.
@@ -93,6 +132,17 @@ if defined WCK_BAD (
     endlocal
     exit /b 1
 )
+rem Colour variables are defined here, in the main process, because a label called
+rem from inside a for /f subprocess fails with "Invalid attempt to call batch label
+rem outside of batch script". Everything that renders a header relies on these
+rem already being set.
+set "C_RESET=[0m"
+set "C_BRAND=[36m"
+set "C_ACCENT=[96m"
+set "C_OK=[92m"
+set "C_MUTED=[90m"
+set "C_WARN=[93m"
+
 rem ===========================================================================
 rem  Default path: hand the session to the PowerShell TUI.
 rem
@@ -101,13 +151,9 @@ rem  This file therefore does one thing well -- elevation -- and delegates the
 rem  interface. Pass --simple (or --no-tui) for the numbered menu further down,
 rem  which suits automation, screen readers, and consoles without ANSI support.
 rem ===========================================================================
-set "WCK_SIMPLE="
-for %%A in (%*) do (
-    if /i "%%A"=="--simple" set "WCK_SIMPLE=1"
-    if /i "%%A"=="--no-tui" set "WCK_SIMPLE=1"
-)
+rem  WCK_SIMPLE was already resolved above, before elevation.
 if not defined WCK_SIMPLE (
-    "%WCK_PS%" -NoProfile -ExecutionPolicy Bypass -File "%WCK_ENGINE%" -Tui --tui-exit-code
+    "%WCK_PS%" -NoProfile -ExecutionPolicy Bypass -File "%WCK_ENGINE%" -Tui -TuiExitCode
     set "WCK_RC=!ERRORLEVEL!"
     if "!WCK_RC!"=="0" (
         endlocal
@@ -150,6 +196,32 @@ exit /b 0
 if defined WCK_ANS set "WCK_ANS=%WCK_ANS:|=/%"
 exit /b 0
 
+:ask
+rem %~1 = prompt text. Reads one line into WCK_ANS.
+rem
+rem set /p leaves its target variable untouched when the input stream has ended,
+rem so seeding a sentinel first separates "the user pressed Enter" (answer is
+rem empty, show the menu again) from "there is no more input at all" (stdin is a
+rem file, NUL, or a closed pipe). Without this the numbered menu reprints itself
+rem as fast as cmd can loop whenever the input ends, which is what happens under
+rem automation, a scheduled task, or an automated test.
+rem
+rem The end-of-input flag exists because this label is reached through call, and
+rem goto does not unwind the call stack: an exit /b from :bye would only return
+rem to whichever menu called :ask, which would then loop. Each menu label checks
+rem the flag on entry, so the exit unwinds one frame per bounce and ends at
+rem :main, where the stack is empty and exit /b really does leave the script.
+set "WCK_ANS=__WCK_EOF__"
+set /p "WCK_ANS=%~1"
+if "!WCK_ANS!"=="__WCK_EOF__" (
+    echo.
+    echo   [i] 输入已结束，退出。
+    set "WCK_EOF=1"
+    goto :bye
+)
+call :saveans
+exit /b 0
+
 :appendline
 rem %1 = file, %2 = value
 >>"%~1" echo %~2
@@ -190,18 +262,14 @@ if exist "%WCK_MINUS%" del "%WCK_MINUS%" >nul 2>&1
 exit /b 0
 
 :uiclear
-rem Return the cursor to the top of the window and redraw over the previous frame.
-rem A blanket CLS on every screen makes the window flash and discards the lines the
-rem user was reading. Blanking only the region we rewrite avoids both, and leaves
-rem the last 25 lines as scrollback.
+rem Only used on exit now. The header inlines this sequence because calling a label
+rem from inside a for /f subprocess is an error.
 <nul set /p "=[H[2J[25;1H"
 exit /b 0
 
 :setcolours
-rem Semantic colour roles, mirroring $script:Ink in src\WinCleanKit.ps1 so the
-rem front-end and the engine look like one product. ANSI is used because cmd's
-rem own `color` command only sets the whole screen.
-rem   C_RESET  C_BRAND  C_ACCENT  C_OK  C_MUTED  C_WARN
+rem Re-defines the colour variables. They are already set at startup; this exists
+rem for clarity and for any future caller outside a for /f subprocess.
 set "C_RESET=[0m"
 set "C_BRAND=[36m"
 set "C_ACCENT=[96m"
@@ -215,21 +283,25 @@ echo   %C_MUTED%风险等级:  低 = 可逆、无副作用     中 = 有可见�
 exit /b 0
 
 :header
-call :toolang
-call :uiclear
-call :setcolours
+rem Everything is inlined on purpose. The first render of this header happens
+rem inside the for /f subprocess that reads the menu data, and calling a label
+rem from there fails with "Invalid attempt to call batch label outside of batch
+rem script", which printed an error on every screen.
 echo.
+echo   [H[2J[25;1H
 echo   %C_BRAND%--------------------------------------------------------------------%C_RESET%
 echo   %C_ACCENT%WinCleanKit%C_RESET%   Windows 11 广告 / 遥测 / 预装清理
 echo   %C_BRAND%--------------------------------------------------------------------%C_RESET%
 echo   %C_MUTED%预设: %C_RESET%%WCK_MODE%      %C_MUTED%语言: %C_RESET%%WCK_UILANG%
-call :legend
+echo   %C_MUTED%风险等级:  低 = 可逆、无副作用     中 = 有可见取舍     高 = 会删除程序或数据%C_RESET%
 exit /b 0
 
 rem ===========================================================================
 rem  Preset
 rem ===========================================================================
 :menu_preset
+rem The input stream ended (see :ask): unwind one call frame and quit.
+if defined WCK_EOF exit /b 0
 call :header
 echo.
 echo   --------------------------------------------------------------------
@@ -244,8 +316,7 @@ call :summarybar
 echo.
 echo     B. 返回
 echo.
-set /p "WCK_ANS=  输入编号: "
-call :saveans
+call :ask "  输入编号: "
 if /i "%WCK_ANS%"=="1" set "WCK_MODE=conservative"
 if /i "%WCK_ANS%"=="2" set "WCK_MODE=balanced"
 if /i "%WCK_ANS%"=="3" set "WCK_MODE=aggressive"
@@ -256,28 +327,29 @@ rem ===========================================================================
 rem  Category detail  (view only, with a shortcut to toggle the whole category)
 rem ===========================================================================
 :menu_cat
+rem The input stream ended (see :ask): unwind one call frame and quit.
+if defined WCK_EOF exit /b 0
 set "WCK_CAT=%~1"
 call :header
 call :toolang
-for /f "usebackq tokens=1,2,3,4 delims=|" %%A in (`call :menurun -Mode cat -Category "%WCK_CAT%"`) do (
+for /f "usebackq tokens=1,2,3,4 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Preset "%WCK_MODE%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode cat -Category "%WCK_CAT%"`) do (
     if "%%D"=="1" (echo     [x] %%B   [%%C]) else (echo     [ ] %%B   [%%C])
 )
 echo.
 echo     T. 切换本类全部
 echo     B. 返回
 echo.
-set /p "WCK_ANS=  输入 T 切换 / B 返回: "
-call :saveans
+call :ask "  输入 T 切换 / B 返回: "
 if /i "%WCK_ANS%"=="b" exit /b 0
 if /i "%WCK_ANS%"=="t" (
     rem If the whole category is currently on, turn it off; otherwise turn it on.
     set "WCK_CATON=0"
     set "WCK_CATOFF=0"
-    for /f "usebackq tokens=1,4 delims=|" %%A in (`call :menurun -Mode cat -Category "%WCK_CAT%"`) do (
+    for /f "usebackq tokens=1,4 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Preset "%WCK_MODE%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode cat -Category "%WCK_CAT%"`) do (
         if "%%B"=="1" set /a WCK_CATON+=1
         if not "%%B"=="1" set /a WCK_CATOFF+=1
     )
-    for /f "usebackq tokens=1,4 delims=|" %%A in (`call :menurun -Mode cat -Category "%WCK_CAT%"`) do (
+    for /f "usebackq tokens=1,4 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Preset "%WCK_MODE%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode cat -Category "%WCK_CAT%"`) do (
         if !WCK_CATOFF! GTR 0 (
             rem turn all on
             if "%%B"=="0" (
@@ -302,15 +374,20 @@ if /i "%WCK_ANS%"=="t" (
 goto :menu_cat
 
 :menu_cats
+rem The input stream ended (see :ask): unwind one call frame and quit.
+if defined WCK_EOF exit /b 0
 call :header
 call :toolang
 echo.
 echo   --------------------------------------------------------------------
 echo     按分类选择
 echo   --------------------------------------------------------------------
-for /f "usebackq tokens=1,2,3,4 delims=|" %%A in (`call :menurun -Mode main`) do (
+for /f "usebackq tokens=1,2,3,4 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Preset "%WCK_MODE%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode main`) do (
     if not "%%A"=="TOTAL" (
-        call :riskzh %%D
+        set "WCK_RISKTXT="
+        if "%%D"=="1" set "WCK_RISKTXT=低"
+        if "%%D"=="2" set "WCK_RISKTXT=中"
+        if "%%D"=="3" set "WCK_RISKTXT=高"
         if "%%C" GTR 0 (echo     [x] %%A  %%B   [!WCK_RISKTXT!]  已选 %%C 项) else (echo     [ ] %%A  %%B   [!WCK_RISKTXT!]  已选 %%C 项)
     )
 )
@@ -318,11 +395,10 @@ echo.
 echo     输入分类代号查看详情并切换（如 ads）
 echo     B. 返回
 echo.
-set /p "WCK_ANS=  代号 / B: "
-call :saveans
+call :ask "  代号 / B: "
 if /i "%WCK_ANS%"=="b" exit /b 0
 set "WCK_FOUNDCAT=0"
-for /f "usebackq tokens=1,3,4 delims=|" %%A in (`call :menurun -Mode main`) do (
+for /f "usebackq tokens=1,3,4 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Preset "%WCK_MODE%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode main`) do (
     if /i "%%A"=="%WCK_ANS%" set "WCK_FOUNDCAT=1"
 )
 if "%WCK_FOUNDCAT%"=="1" call :menu_cat "%WCK_ANS%"
@@ -332,32 +408,33 @@ rem ===========================================================================
 rem  Per-item customisation
 rem ===========================================================================
 :menu_items
+rem The input stream ended (see :ask): unwind one call frame and quit.
+if defined WCK_EOF exit /b 0
 call :header
 call :toolang
 echo.
 echo   --------------------------------------------------------------------
 echo     逐项自定义   [x]=执行  [ ]=跳过
 echo   --------------------------------------------------------------------
-for /f "usebackq tokens=1,2,3,4,5,6 delims=|" %%A in (`call :menurun -Mode items`) do (
+for /f "usebackq tokens=1,2,3,4,5,6 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Preset "%WCK_MODE%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode items`) do (
     if "%%F"=="1" (echo     [x] %%A. %%C   [%%D]) else (echo     [ ] %%A. %%C   [%%D])
 )
 echo.
 echo     输入编号切换该项;  A. 全部选中此预设;  N. 全部取消;  B. 返回
 echo.
-set /p "WCK_ANS=  编号 / A / N / B: "
-call :saveans
+call :ask "  编号 / A / N / B: "
 if /i "%WCK_ANS%"=="b" exit /b 0
 if /i "%WCK_ANS%"=="a" (
     call :clearchoice
     goto :menu_items
 )
 if /i "%WCK_ANS%"=="n" (
-    for /f "usebackq tokens=2 delims=|" %%A in (`call :menurun -Mode items`) do call :appendline "%WCK_MINUS%" "%%A"
+    for /f "usebackq tokens=2 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Preset "%WCK_MODE%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode items`) do call :appendline "%WCK_MINUS%" "%%A"
     goto :menu_items
 )
 set "WCK_PICKID="
 set "WCK_PICKSEL="
-for /f "usebackq tokens=1,2,6 delims=|" %%A in (`call :menurun -Mode items`) do (
+for /f "usebackq tokens=1,2,6 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Preset "%WCK_MODE%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode items`) do (
     if "%%A"=="%WCK_ANS%" (
         set "WCK_PICKID=%%B"
         set "WCK_PICKSEL=%%C"
@@ -383,8 +460,11 @@ rem ===========================================================================
 rem  Summary bar
 rem ===========================================================================
 :summarybar
-for /f "usebackq tokens=1,2,3,4,5 delims=|" %%A in (`call :menurun -Mode summary`) do (
-    call :riskzh %%C
+for /f "usebackq tokens=1,2,3,4,5 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Preset "%WCK_MODE%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode summary`) do (
+    set "WCK_RISKTXT="
+    if "%%C"=="1" set "WCK_RISKTXT=低"
+    if "%%C"=="2" set "WCK_RISKTXT=中"
+    if "%%C"=="3" set "WCK_RISKTXT=高"
     echo     当前计划: 共 %%B 项, 最高风险 [!WCK_RISKTXT!]   ^(手动加 %%D / 手动减 %%E^)
 )
 exit /b 0
@@ -399,7 +479,7 @@ rem Hand the resolved selection over as a file: it survives any number of items
 rem and avoids comma/quote games on the command line.
 set "WCK_SELFILE=%WCK_TMP%\selection.txt"
 if exist "%WCK_SELFILE%" del "%WCK_SELFILE%" >nul 2>&1
-for /f "usebackq delims=" %%A in (`call :menurun -Mode sel`) do >>"%WCK_SELFILE%" echo %%A
+for /f "usebackq delims=" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Preset "%WCK_MODE%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode sel`) do >>"%WCK_SELFILE%" echo %%A
 call :countlines "%WCK_SELFILE%"
 if "%WCK_COUNT%"=="0" (
     echo     [!] 当前没有选中任何项目。
@@ -418,8 +498,11 @@ rem ===========================================================================
 :do_apply
 call :header
 call :toolang
-for /f "usebackq tokens=1,2,3,4,5 delims=|" %%A in (`call :menurun -Mode summary`) do (
-    call :riskzh %%C
+for /f "usebackq tokens=1,2,3,4,5 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Preset "%WCK_MODE%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode summary`) do (
+    set "WCK_RISKTXT="
+    if "%%C"=="1" set "WCK_RISKTXT=低"
+    if "%%C"=="2" set "WCK_RISKTXT=中"
+    if "%%C"=="3" set "WCK_RISKTXT=高"
     echo     即将执行: 共 %%B 项, 最高风险 [!WCK_RISKTXT!]
 )
 echo.
@@ -435,14 +518,14 @@ echo     [2] 直接执行
 echo     [3] 模拟执行（dry run，不写入但走完整流程）
 echo     B. 取消
 echo.
-set /p "WCK_ANS=  选择: "
-call :saveans
+call :ask "  选择: "
+if defined WCK_EOF exit /b 0
 if /i "%WCK_ANS%"=="1" (call :do_preview & exit /b 0)
 if /i "%WCK_ANS%"=="b" exit /b 0
 
 set "WCK_SELFILE=%WCK_TMP%\selection.txt"
 if exist "%WCK_SELFILE%" del "%WCK_SELFILE%" >nul 2>&1
-for /f "usebackq delims=" %%A in (`call :menurun -Mode sel`) do >>"%WCK_SELFILE%" echo %%A
+for /f "usebackq delims=" %%A in (`%WCK_PSFULL% -NoProfile -ExecutionPolicy Bypass -File "%WCK_MENU%" -Preset "%WCK_MODE%" -Lang "%WCK_LANG%" -PlusFile "%WCK_PLUS%" -MinusFile "%WCK_MINUS%" -Mode sel`) do >>"%WCK_SELFILE%" echo %%A
 call :countlines "%WCK_SELFILE%"
 if "%WCK_COUNT%"=="0" (
     echo     [!] 当前没有选中任何项目。
@@ -460,8 +543,8 @@ if /i "%WCK_ANS%"=="3" (
 
 echo.
 echo     输入 APPLY 确认执行，其他任意键取消:
-set /p "WCK_ANS=  > "
-call :saveans
+call :ask "  > "
+if defined WCK_EOF exit /b 0
 if /i not "%WCK_ANS%"=="APPLY" (
     echo     已取消。
     timeout /t 1 >nul
@@ -485,8 +568,8 @@ echo   --------------------------------------------------------------------
 call :psrun -ListRestores -Language "%WCK_TOOLANG%"
 echo.
 echo     输入要还原的目录名（完整名称），或 B 返回:
-set /p "WCK_ANS=  > "
-call :saveans
+call :ask "  > "
+if defined WCK_EOF exit /b 0
 if /i "%WCK_ANS%"=="b" exit /b 0
 if not defined WCK_ANS exit /b 0
 call :psrun -Restore "%WCK_ANS%" -Language "%WCK_TOOLANG%"
@@ -524,6 +607,9 @@ rem ===========================================================================
 rem  Main
 rem ===========================================================================
 :main
+rem The input stream ended (see :ask). This label is reached with an empty call
+rem stack, so the exit below leaves the script instead of bouncing again.
+if defined WCK_EOF exit /b 0
 call :header
 echo.
 call :summarybar
@@ -541,8 +627,7 @@ echo     7. 切换语言            (当前 %WCK_UILANG%)
 echo     8. 关于
 echo     0. 退出
 echo.
-set /p "WCK_ANS=  选择: "
-call :saveans
+call :ask "  选择: "
 if "%WCK_ANS%"=="1" (call :menu_preset & goto :main)
 if "%WCK_ANS%"=="2" (call :menu_cats   & goto :main)
 if "%WCK_ANS%"=="3" (call :menu_items  & goto :main)

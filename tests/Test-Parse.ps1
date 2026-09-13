@@ -84,6 +84,65 @@ if (Test-Path $batPath) {
     Check 'bat uses CRLF' ($batText.Contains("`r`n")) 'cmd requires CRLF'
 }
 
+Write-Head 'Batch launcher invariants'
+# Two cmd behaviours bit this project and neither is visible in a code review:
+#
+#   * chcp discards whatever is on the standard input stream. A caller feeding
+#     the numbered menu from a file or a pipe therefore lost its first lines and
+#     the menu read end-of-input straight away.
+#   * a parameter that carries a script path is re-resolved against the *current*
+#     directory every time it is expanded, not the directory the file was called
+#     from. run.bat calling the relative "src\WinCleanKit.bat" made the callee
+#     resolve its own folder a second time after its cd and see src\src.
+#
+# These checks keep both fixes, and the single end-of-input implementation, in
+# place. Comment lines are ignored: rem never expands anything.
+function Get-CodeLine {
+    param([string]$Path)
+    $text = [Text.Encoding]::UTF8.GetString([IO.File]::ReadAllBytes($Path))
+    return @($text -split "`r?`n" | Where-Object { $_ -notmatch '^\s*rem\b' })
+}
+
+if (Test-Path $batPath) {
+    $batLines = Get-CodeLine $batPath
+
+    $chcp = @($batLines | Where-Object { $_ -match '^\s*chcp\b' })
+    Check 'bat: chcp does not eat stdin' (($chcp.Count -ge 1) -and (@($chcp | Where-Object { $_ -match '<nul' }).Count -eq $chcp.Count)) 'chcp must be handed <nul or it discards piped input'
+
+    $cdAt = -1
+    for ($i = 0; $i -lt $batLines.Count; $i++) { if ($batLines[$i] -match '^\s*cd\s+/d\b') { $cdAt = $i; break } }
+    $late = @()
+    for ($i = $cdAt + 1; $i -lt $batLines.Count -and $cdAt -ge 0; $i++) {
+        if ($batLines[$i] -match '%~[A-Za-z]*0') { $late += ($i + 1) }
+    }
+    Check 'bat: script path read before cd' ($cdAt -ge 0 -and $late.Count -eq 0) $(if ($late.Count) { 'expanded after the working directory moves, line(s) ' + ($late -join ', ') } else { 'no script path is expanded after the working directory moves' })
+
+    $label = ''
+    $stray = @()
+    for ($i = 0; $i -lt $batLines.Count; $i++) {
+        if ($batLines[$i] -match '^:([A-Za-z_]\w*)\s*$') { $label = $Matches[1] }
+        if ($batLines[$i] -match 'set\s+/p\b' -and $batLines[$i] -notmatch '<nul\s+set\s+/p' -and $label -ne 'ask') {
+            $stray += ("line {0} in :{1}" -f ($i + 1), $label)
+        }
+    }
+    Check 'bat: every prompt goes through :ask' ($stray.Count -eq 0) $(if ($stray.Count) { 'stray: ' + ($stray -join ', ') } else { 'end-of-input is detected in exactly one place' })
+}
+
+$runPath = Join-Path $root 'run.bat'
+if (Test-Path $runPath) {
+    $runLines = Get-CodeLine $runPath
+    $captured = -1
+    $runCdAt = -1
+    for ($i = 0; $i -lt $runLines.Count; $i++) {
+        if ($captured -lt 0 -and $runLines[$i] -match 'set\s+"[^"]+=[^"]*%~dp0') { $captured = $i }
+        if ($runCdAt -lt 0 -and $runLines[$i] -match '^\s*cd\s+/d\b') { $runCdAt = $i }
+    }
+    Check 'run.bat: folder captured before cd' ($captured -ge 0 -and ($runCdAt -lt 0 -or $captured -lt $runCdAt)) 'otherwise the callee re-resolves a relative path against the new directory'
+
+    $call = @($runLines | Where-Object { $_ -match '^\s*call\s+' -and $_ -match 'WinCleanKit\.bat' })
+    Check 'run.bat: launcher called by absolute path' ($call.Count -eq 1 -and $call[0] -notmatch 'call\s+"src\\') 'call "%VAR%src\..." so the callee never resolves itself twice'
+}
+
 Write-Head 'Required files present'
 # These are load-bearing for CI. .gitignore once excluded the analyzer ruleset with
 # a blanket *.psd1, which silently weakened the lint gate in CI but not locally.

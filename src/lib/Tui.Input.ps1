@@ -245,7 +245,7 @@ function Show-TuiInteraction {
     return $null
 }
 
-function Start-TuiSession {
+function Show-TuiSession {
     <#
       Entry point. Prepares the terminal, runs the loop, restores the terminal, and
       returns the confirmed plan (or $null). Never changes the system itself.
@@ -259,21 +259,21 @@ function Start-TuiSession {
     )
 
     # Three outcomes are reported distinctly so a caller can tell "cannot draw
-    # here" from "the user quit": $script:TuiExitCode stays 3 for the former and
+    # here" from "the user quit": $script:TuiOutcome stays 3 for the former and
     # 0 for the latter. src\WinCleanKit.bat depends on that difference to decide
     # whether to fall back to the numbered menu.
     if (-not (Test-TuiSupported)) {
-        $script:TuiExitCode = 3
+        $script:TuiOutcome = 3
         Write-Host '  [!] No interactive console, so the full-screen UI cannot start.' -ForegroundColor Yellow
         return $null
     }
     if (-not (Enable-TuiAnsi)) {
-        $script:TuiExitCode = 3
+        $script:TuiOutcome = 3
         Write-Host '  [!] This console cannot render the full-screen UI.' -ForegroundColor Yellow
         return $null
     }
 
-    $script:TuiExitCode = 0
+    $script:TuiOutcome = 0
     $state = Initialize-TuiState -Catalog $Catalog -Preset $Preset -Language $Language
     Enter-TuiScreen
     try {

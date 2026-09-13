@@ -767,7 +767,7 @@ function Open-InteractiveSession {
     [CmdletBinding()]
     param([string]$TuiPreset)
 
-    $result = Start-TuiSession -Catalog (Get-Catalog) -Engine $PSCommandPath `
+    $result = Show-TuiSession -Catalog (Get-Catalog) -Engine $PSCommandPath `
                          -Preset $TuiPreset -Language $TuiLanguage
 
     if (-not $result) { return $null }
@@ -813,7 +813,7 @@ try {
             if ($TuiExitCode) {
                 # 3 means "this console cannot draw the TUI"; the front-end then
                 # falls back to the numbered menu. 0 means the user quit.
-                exit $(if ($script:TuiExitCode) { $script:TuiExitCode } else { 0 })
+                exit $(if ($script:TuiOutcome) { $script:TuiOutcome } else { 0 })
             }
             Write-Info 'Nothing selected; no changes were made.'
             return

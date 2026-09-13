@@ -8,20 +8,42 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
-- **`run.bat` / `WinCleanKit.bat` could not start at all.** Two independent bugs,
-  both introduced by the TUI work and both reported from a real run:
-  - The repository root was derived with `%CD%` *after* `cd`-ing into `src\`, so
-    every path it built pointed at `src\src\...` and PowerShell failed with
-    "The argument ... does not exist". The root is now resolved from the batch
-    file's own location (`for %%I in ("%~dp0..") do set "WCK_ROOT=%%~fI"`), which
-    does not depend on the current directory.
-  - A comment contained batch parameter-substitution syntax (`%~fI`). cmd expands
-    those **even inside `rem`**, so the file failed at parse time with "the
-    following usage of the path operator in batch-parameter substitution is
-    invalid" and printed nothing useful. The comment no longer contains it.
-  - `WinCleanKit.bat` also gained a preflight check: if the expected files are
-    missing it now names the exact missing path and prints the expected layout,
-    instead of letting PowerShell report a confusing path error several steps on.
+- **`run.bat` / `WinCleanKit.bat` could not start at all when launched the way a
+  user launches them.** cmd re-resolves a parameter that carries a script path
+  against the *current* directory on every expansion, not the directory the file
+  was called from. Because `run.bat` called the relative `src\WinCleanKit.bat`, the
+  callee's `cd` into `src\` made the next expansion of its own folder yield
+  `src\src\`, so every path it built pointed one level too deep and PowerShell
+  failed with "The argument ... does not exist". The folder and the script path are
+  now read once into `WCK_SRC` / `WCK_BATSELF` before anything changes directory,
+  and `run.bat` calls the launcher through its own absolute path. Elevation used
+  `%~f0` and was broken the same way; it now uses `WCK_BATSELF`.
+- **A commented-out `%~fI` made the whole file a parse error.** cmd expands
+  parameter-substitution syntax *even inside `rem`*, so the file failed with "the
+  following usage of the path operator in batch-parameter substitution is invalid"
+  and printed nothing useful. No comment carries that syntax any more, and
+  `tests/Test-Parse.ps1` fails if one comes back.
+- **`chcp` silently discarded the caller's standard input.** Driving the numbered
+  menu from a file or a pipe lost its first lines at the `chcp 65001` line, so the
+  menu saw end-of-input before the first answer. `chcp` is now handed `<nul`; the
+  interactive reads downstream keep the real stream.
+- **The numbered menu could not be scripted or piped at all.** `set /p` leaves its
+  target variable unchanged at end of input, so the menu reprinted itself as fast
+  as cmd could loop. Every prompt now goes through one `:ask` helper that seeds a
+  sentinel value, distinguishes "the user pressed Enter" from "there is no more
+  input", and unwinds cleanly through the menu labels when the stream ends.
+- **The menu-data reads failed inside `for /f`.** A command containing double
+  quotes is torn apart unless the loop is declared `usebackq`, so invoking the
+  helper by full path reported "cannot find the file"; and calling a batch label
+  inside the backticks spawned a child process that lost batch-label context,
+  printing "Invalid attempt to call batch label outside of batch script" on every
+  screen. All twelve call sites are now direct `usebackq` invocations.
+- `WinCleanKit.bat` also gained a preflight check: if the expected files are
+  missing it now names the exact missing path and prints the expected layout,
+  instead of letting PowerShell report a confusing path error several steps on.
+- **The `--simple` switch was lost on elevation.** The elevated instance is a fresh
+  process, so a user who asked for the accessible menu was dropped into the
+  full-screen one. The switch is now resolved before elevation and forwarded.
 - **The plain menu was unreachable when the TUI could not start.** The TUI
   reported the fallback and then exited 0, so the front-end treated that as
   success and terminated silently. The TUI now distinguishes "this console cannot
@@ -30,17 +52,23 @@ All notable changes to this project are documented here. The format follows
 - A duplicated block-comment terminator and a stale function name in
   `Tui.Input.ps1`, and a name that a bulk rename had doubled into
   `Show-TuiSessionSession`. Three functions now have distinct names:
-  `Open-InteractiveSession` (engine wrapper), `Start-TuiSession` (entry point),
+  `Open-InteractiveSession` (engine wrapper), `Show-TuiSession` (entry point),
   `Show-TuiInteraction` (the key loop).
 
 ### Notes
 
-- The path fix and the parse-error fix were both verified on Windows by invoking
-  the batch file directly, in both call styles (`WinCleanKit.bat` from `src\` and
-  via the root `run.bat`).
-- The remaining fixes in this entry are **statically** verified only (label and
-  variable consistency, encoding rules, no parameter substitution in comments).
-  A full gate run and a manual TUI session are still outstanding.
+- The batch fixes above were verified on Windows PowerShell 5.1 / Windows 11 by
+  driving the numbered menu from a scripted input file: quit, about, each preset,
+  the language toggle, category selection, per-item selection, preview,
+  apply-cancel, apply-confirm and restore all exit 0 with no cmd error text, in
+  both call styles (`run.bat` and the inner `WinCleanKit.bat`, relative and
+  absolute). All eight gates pass.
+- `tests/Test-Parse.ps1` gained five checks that pin the batch launcher rules:
+  `chcp` must keep stdin, no script path may be expanded after the working
+  directory moves, every prompt must go through `:ask`, and `run.bat` must capture
+  its folder before `cd` and call the launcher absolutely.
+- Still verified by hand rather than by a gate: the full-screen TUI's key loop.
+  Reading keys and repainting needs a real interactive console.
 
 ### Added
 
