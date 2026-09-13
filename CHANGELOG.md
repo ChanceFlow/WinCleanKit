@@ -6,8 +6,84 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-### Fixed
+### Added
+- **A full-screen TUI.** The interactive interface is now a keyboard-driven,
+  panel-based application instead of a numbered menu: a header showing the armed
+  plan and its highest risk, a category pane with per-category selected counts, an
+  action pane with checkboxes, a detail pane that states what the focused action
+  touches, and a key/status footer.
+  - Arrow keys move, `Tab` switches panes, `space` toggles, `Enter` opens a
+    category and steps down, `1`/`2`/`3` switch preset, `a`/`n`/`A`/`N` select by
+    category or wholesale, `l` switches language, `p` previews, `x` applies,
+    `?` shows in-app help.
+  - It draws into the alternate screen buffer, so the terminal scrollback survives
+    the session, and the terminal is restored from a `finally` block.
+  - Legacy consoles get VT processing enabled through the Windows API; if that
+    fails, or output is redirected, the TUI declines and the plain path is used.
+- **`--simple`** (and `-Tui:$false`) keeps the previous numbered menu, for
+  automation, screen readers, and terminals without ANSI support.
+- **Two new test gates.** `tests/Test-Tui.ps1` (57 checks) covers the navigation,
+  selection, preset, risk and scroll-window logic; `tests/Test-TuiRender.ps1`
+  (54 checks) covers the frame geometry, pane borders, checkbox rendering, the help
+  screen, and that rendering never mutates state.
+- `src/lib/Tui.Logic.ps1`, `src/lib/Tui.Render.ps1`, `src/lib/Tui.Input.ps1`.
+- **A terminal design system.** The engine now owns one palette and one status
+  vocabulary instead of scattering colours and markers through the output:
+  - Semantic colour roles (`brand`, `accent`, `success`, `caution`, `danger`,
+    `muted`) in a single `$script:Ink` table; `src/WinCleanKit.bat` mirrors the
+    same roles so the front-end and the engine read as one product.
+  - **Width-aware alignment.** `Format-Text` measures display width, so CJK
+    tables line up instead of drifting — PowerShell's own `{0,-20}` counts
+    characters, and a Chinese glyph is two columns wide but one character.
+  - **Colour is never the only signal.** Every state carries a text marker
+    (`[ok]`, `[dry]`, `[--]`, `[!!]`, `[XX]`) and colours degrade to plain text
+    when output is redirected, piped, or `NO_COLOR` is set.
+  - **Progress for long runs** (`[ 12/74]  16%`), so a 74-action run never looks
+    frozen.
+  - **A unified status vocabulary**, replacing the previous mix of `[ OK ]`,
+    `[skip ]` and `[would]`.
+- **`run.bat`**, a double-click launcher at the repository root, so the obvious
+  file to open is no longer one hidden under `src\`.
+- The generated restore script now uses the same status vocabulary as the engine.
+- **Bilingual documentation.** `docs/USAGE`, `docs/SAFETY`, `docs/LIMITATIONS`,
+  `CONTRIBUTING`, `SECURITY` and `CODE_OF_CONDUCT` now have Chinese counterparts,
+  and every bilingual file carries a language switcher that links to its
+  counterpart in both directions.
+- **`tests/Test-Docs.ps1`** — the documentation gate: every relative link must
+  resolve, every translatable document must have a `.zh-CN.md` that links back,
+  the switcher must be near the top, and no tracked file may contain a private
+  network address.
+- **`tools/New-CatalogDoc.ps1`** — the catalog documentation generator, now part of
+  the repository instead of a throwaway script. It emits `docs/CATALOG.md` and its
+  Chinese pointer, and `-Check` verifies the committed files are current so CI
+  catches a catalog edit that forgot to regenerate.
+- `docs/CATALOG.md` is now bilingual: each of the 74 actions lists its English and
+  Chinese title and rationale together, rather than in two copies that would drift.
+- **`tests/Test-Parse.ps1`** — the syntax gate. Parses every PowerShell file and
+  verifies the file-encoding rules (BOM for `.ps1`/`.psd1`, no BOM and CRLF for `.bat`).
+- **`tests/Test-Analyzer.ps1`** — the lint gate, runnable locally and in CI.
+- **`docs/LINTING.md`** — why syntax and lint are separate gates, the current finding
+  counts, and the reasoning behind each excluded rule.
 
+### Changed
+- `WinCleanKit.bat` is now purely an elevation launcher: cmd cannot read arrow
+  keys, so a full-screen interface is impossible there. It hands the session to the
+  engine's TUI and keeps the numbered menu behind `--simple`.
+- Category display names shortened so they fit the TUI's list pane without
+  truncation ("Ads & suggestions" rather than "Windows ads & suggestions").
+- `docs/CATALOG.md` regenerated for the new names.
+- The front-end no longer calls `CLS` on every screen. It repositions the cursor
+  and redraws over the previous frame, which removes the flash and keeps the last
+  25 lines available as scrollback.
+- The front-end header uses the engine's divider style, so the two surfaces match.
+- The READMEs lead with what the tool actually looks like — real menu, plan and
+  apply output — plus build badges whose numbers are verified against the catalog
+  and the gate results.
+- The `origin` remote points at the public GitHub URL. The internal Gitea mirror is
+  a separate remote named `gitea`, so a clone never reveals an internal address
+  through `git remote -v`.
+
+### Fixed
 - **`run.bat` / `WinCleanKit.bat` could not start at all when launched the way a
   user launches them.** cmd re-resolves a parameter that carries a script path
   against the *current* directory on every expansion, not the directory the file
@@ -54,140 +130,10 @@ All notable changes to this project are documented here. The format follows
   `Show-TuiSessionSession`. Three functions now have distinct names:
   `Open-InteractiveSession` (engine wrapper), `Show-TuiSession` (entry point),
   `Show-TuiInteraction` (the key loop).
-
-### Notes
-
-- The batch fixes above were verified on Windows PowerShell 5.1 / Windows 11 by
-  driving the numbered menu from a scripted input file: quit, about, each preset,
-  the language toggle, category selection, per-item selection, preview,
-  apply-cancel, apply-confirm and restore all exit 0 with no cmd error text, in
-  both call styles (`run.bat` and the inner `WinCleanKit.bat`, relative and
-  absolute). All eight gates pass.
-- `tests/Test-Parse.ps1` gained five checks that pin the batch launcher rules:
-  `chcp` must keep stdin, no script path may be expanded after the working
-  directory moves, every prompt must go through `:ask`, and `run.bat` must capture
-  its folder before `cd` and call the launcher absolutely.
-- Still verified by hand rather than by a gate: the full-screen TUI's key loop.
-  Reading keys and repainting needs a real interactive console.
-
-### Added
-
-- **A full-screen TUI.** The interactive interface is now a keyboard-driven,
-  panel-based application instead of a numbered menu: a header showing the armed
-  plan and its highest risk, a category pane with per-category selected counts, an
-  action pane with checkboxes, a detail pane that states what the focused action
-  touches, and a key/status footer.
-  - Arrow keys move, `Tab` switches panes, `space` toggles, `Enter` opens a
-    category and steps down, `1`/`2`/`3` switch preset, `a`/`n`/`A`/`N` select by
-    category or wholesale, `l` switches language, `p` previews, `x` applies,
-    `?` shows in-app help.
-  - It draws into the alternate screen buffer, so the terminal scrollback survives
-    the session, and the terminal is restored from a `finally` block.
-  - Legacy consoles get VT processing enabled through the Windows API; if that
-    fails, or output is redirected, the TUI declines and the plain path is used.
-- **`--simple`** (and `-Tui:$false`) keeps the previous numbered menu, for
-  automation, screen readers, and terminals without ANSI support.
-- **Two new test gates.** `tests/Test-Tui.ps1` (55 checks) covers the navigation,
-  selection, preset, risk and scroll-window logic; `tests/Test-TuiRender.ps1`
-  (50 checks) covers the frame geometry, pane borders, checkbox rendering, the help
-  screen, and that rendering never mutates state.
-- `src/lib/Tui.Logic.ps1`, `src/lib/Tui.Render.ps1`, `src/lib/Tui.Input.ps1`.
-
-### Changed
-
-- `WinCleanKit.bat` is now purely an elevation launcher: cmd cannot read arrow
-  keys, so a full-screen interface is impossible there. It hands the session to the
-  engine's TUI and keeps the numbered menu behind `--simple`.
-- Category display names shortened so they fit the TUI's list pane without
-  truncation ("Ads & suggestions" rather than "Windows ads & suggestions").
-- `docs/CATALOG.md` regenerated for the new names.
-
-### Notes
-
-- **What is not tested, stated plainly:** the key loop itself. Reading keys and
-  repainting needs a real interactive console, which no automated run has. It is
-  kept deliberately thin, guarded statically by the parse and lint gates, and every
-  function it dispatches to is covered by tests/Test-Tui.ps1.
-- The TUI reuses the engine's own preview and execution paths rather than
-  duplicating them, so a change to how a plan is applied cannot drift between the
-  two interfaces.
-
-### Added
-
-- **A terminal design system.** The engine now owns one palette and one status
-  vocabulary instead of scattering colours and markers through the output:
-  - Semantic colour roles (`brand`, `accent`, `success`, `caution`, `danger`,
-    `muted`) in a single `$script:Ink` table; `src/WinCleanKit.bat` mirrors the
-    same roles so the front-end and the engine read as one product.
-  - **Width-aware alignment.** `Format-Text` measures display width, so CJK
-    tables line up instead of drifting — PowerShell's own `{0,-20}` counts
-    characters, and a Chinese glyph is two columns wide but one character.
-  - **Colour is never the only signal.** Every state carries a text marker
-    (`[ok]`, `[dry]`, `[--]`, `[!!]`, `[XX]`) and colours degrade to plain text
-    when output is redirected, piped, or `NO_COLOR` is set.
-  - **Progress for long runs** (`[ 12/74]  16%`), so a 74-action run never looks
-    frozen.
-  - **A unified status vocabulary**, replacing the previous mix of `[ OK ]`,
-    `[skip ]` and `[would]`.
-- **`run.bat`**, a double-click launcher at the repository root, so the obvious
-  file to open is no longer one hidden under `src\`.
-- The generated restore script now uses the same status vocabulary as the engine.
-
-### Changed
-
-- The front-end no longer calls `CLS` on every screen. It repositions the cursor
-  and redraws over the previous frame, which removes the flash and keeps the last
-  25 lines available as scrollback.
-- The front-end header uses the engine's divider style, so the two surfaces match.
-- The READMEs lead with what the tool actually looks like — real menu, plan and
-  apply output — plus build badges whose numbers are verified against the catalog
-  and the gate results.
-
-### Fixed
-
 - PSScriptAnalyzer caught two problems introduced by the refactor: an empty
   `catch` block (now documents why swallowing is correct there) and a
   state-changing verb on a progress helper (`Start-Progress` renamed to
   `Initialize-Progress`).
-
-### Added
-
-- **Bilingual documentation.** `docs/USAGE`, `docs/SAFETY`, `docs/LIMITATIONS`,
-  `CONTRIBUTING`, `SECURITY` and `CODE_OF_CONDUCT` now have Chinese counterparts,
-  and every bilingual file carries a language switcher that links to its
-  counterpart in both directions.
-- **`tests/Test-Docs.ps1`** — the documentation gate: every relative link must
-  resolve, every translatable document must have a `.zh-CN.md` that links back,
-  the switcher must be near the top, and no tracked file may contain a private
-  network address.
-- **`tools/New-CatalogDoc.ps1`** — the catalog documentation generator, now part of
-  the repository instead of a throwaway script. It emits `docs/CATALOG.md` and its
-  Chinese pointer, and `-Check` verifies the committed files are current so CI
-  catches a catalog edit that forgot to regenerate.
-- `docs/CATALOG.md` is now bilingual: each of the 74 actions lists its English and
-  Chinese title and rationale together, rather than in two copies that would drift.
-
-### Changed
-
-- The `origin` remote points at the public GitHub URL. The internal Gitea mirror is
-  a separate remote named `gitea`, so a clone never reveals an internal address
-  through `git remote -v`.
-
-### Notes
-
-- `CONTRIBUTING.md` now documents the bilingual contract, the English-only exceptions
-  (with reasons), and the rule against committing internal addresses.
-
-### Added
-
-- **`tests/Test-Parse.ps1`** — the syntax gate. Parses every PowerShell file and
-  verifies the file-encoding rules (BOM for `.ps1`/`.psd1`, no BOM and CRLF for `.bat`).
-- **`tests/Test-Analyzer.ps1`** — the lint gate, runnable locally and in CI.
-- **`docs/LINTING.md`** — why syntax and lint are separate gates, the current finding
-  counts, and the reasoning behind each excluded rule.
-
-### Fixed
-
 - **The PowerShell did not previously pass PSScriptAnalyzer.** It had only been
   parser-checked. Running PSScriptAnalyzer 1.25.0 with its full default ruleset found
   106 findings (0 errors, 73 warnings); the actionable ones are now fixed in code.
@@ -200,7 +146,25 @@ All notable changes to this project are documented here. The format follows
   Windows PowerShell 5.1 needs, which the analyzer's own encoding rule caught.
 
 ### Notes
-
+- The batch fixes above were verified on Windows PowerShell 5.1 / Windows 11 by
+  driving the numbered menu from a scripted input file: quit, about, each preset,
+  the language toggle, category selection, per-item selection, preview,
+  apply-cancel, apply-confirm and restore all exit 0 with no cmd error text, in
+  both call styles (`run.bat` and the inner `WinCleanKit.bat`, relative and
+  absolute). All eight gates pass.
+- `tests/Test-Parse.ps1` gained five checks that pin the batch launcher rules:
+  `chcp` must keep stdin, no script path may be expanded after the working
+  directory moves, every prompt must go through `:ask`, and `run.bat` must capture
+  its folder before `cd` and call the launcher absolutely.
+- **What is still verified by hand, stated plainly:** the key loop itself. Reading
+  keys and repainting needs a real interactive console, which no automated run has.
+  It is kept deliberately thin, guarded statically by the parse and lint gates, and
+  every function it dispatches to is covered by tests/Test-Tui.ps1.
+- The TUI reuses the engine's own preview and execution paths rather than
+  duplicating them, so a change to how a plan is applied cannot drift between the
+  two interfaces.
+- `CONTRIBUTING.md` now documents the bilingual contract, the English-only exceptions
+  (with reasons), and the rule against committing internal addresses.
 - `[SuppressMessageAttribute]` is only valid inside a function body before `param()`.
   Placing it above a `function` keyword is a parse error, and
   `[CmdletBinding(SupportsShouldProcess)]` is not valid on a function in Windows
