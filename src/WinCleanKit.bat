@@ -77,16 +77,45 @@ if /i "%WCK_PS%"=="pwsh.exe" (
 )
 if not defined WCK_PSFULL set "WCK_PSFULL=%WCK_PS%"
 
-rem --- elevation --------------------------------------------------------------
-rem The plain-menu switch is read before elevation because the elevated instance
-rem is a fresh process: anything not forwarded on its command line is lost, and a
-rem user who asked for the accessible menu should not be dropped into the
-rem full-screen one.
+rem --- command line -----------------------------------------------------------
+rem Read the switches before elevation: the elevated instance is a fresh process,
+rem so anything not forwarded on its command line is lost. A user who asked for the
+rem accessible menu should not be dropped into the full-screen one, and a user who
+rem asked for a language should not be asked for it again.
+rem
+rem   --simple / --no-tui   the numbered menu instead of the full-screen interface
+rem   --lang zh | en        skip the language chooser
+rem   --zh / --en           the same thing, spelled short
+rem   --lang=zh | --lang=en also accepted
+rem
+rem With no language switch the TUI opens on its language chooser, which is the
+rem only place the language can be picked without knowing how to read it.
 set "WCK_SIMPLE="
+set "WCK_TUILANG=ask"
+set "WCK_LANGSET="
+set "WCK_LANGNEXT="
 for %%A in (%*) do (
     if /i "%%A"=="--simple" set "WCK_SIMPLE=1"
     if /i "%%A"=="--no-tui" set "WCK_SIMPLE=1"
+    if defined WCK_LANGNEXT (
+        if /i "%%A"=="zh" set "WCK_LANGSET=zh"
+        if /i "%%A"=="en" set "WCK_LANGSET=en"
+        set "WCK_LANGNEXT="
+    ) else (
+        if /i "%%A"=="--lang" set "WCK_LANGNEXT=1"
+        if /i "%%A"=="--lang=zh" set "WCK_LANGSET=zh"
+        if /i "%%A"=="--lang=en" set "WCK_LANGSET=en"
+        if /i "%%A"=="--zh" set "WCK_LANGSET=zh"
+        if /i "%%A"=="--en" set "WCK_LANGSET=en"
+    )
 )
+rem WCK_LANG is the language of what the tool reports (the menu data, the plan);
+rem WCK_TUILANG is the language the interface opens in, and 'ask' opens the chooser.
+if defined WCK_LANGSET (
+    set "WCK_TUILANG=%WCK_LANGSET%"
+    set "WCK_LANG=%WCK_LANGSET%"
+)
+
 net session >nul 2>&1
 if errorlevel 1 (
     echo.
@@ -99,8 +128,8 @@ if errorlevel 1 (
         pause
         exit /b 1
     )
-    set "WCK_ELEVARGS=--elevated"
-    if defined WCK_SIMPLE set "WCK_ELEVARGS=--elevated --simple"
+    set "WCK_ELEVARGS=--elevated --lang %WCK_TUILANG%"
+    if defined WCK_SIMPLE set "WCK_ELEVARGS=--elevated --simple --lang %WCK_TUILANG%"
     powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%WCK_BATSELF%' -Verb RunAs -ArgumentList '!WCK_ELEVARGS!' -ErrorAction Stop" >nul 2>&1
     if errorlevel 1 (
         echo   [X] Could not elevate. Nothing was changed.
@@ -153,7 +182,7 @@ rem  which suits automation, screen readers, and consoles without ANSI support.
 rem ===========================================================================
 rem  WCK_SIMPLE was already resolved above, before elevation.
 if not defined WCK_SIMPLE (
-    "%WCK_PS%" -NoProfile -ExecutionPolicy Bypass -File "%WCK_ENGINE%" -Tui -TuiExitCode
+    "%WCK_PS%" -NoProfile -ExecutionPolicy Bypass -File "%WCK_ENGINE%" -Tui -TuiExitCode -TuiLanguage "%WCK_TUILANG%"
     set "WCK_RC=!ERRORLEVEL!"
     if "!WCK_RC!"=="0" (
         endlocal

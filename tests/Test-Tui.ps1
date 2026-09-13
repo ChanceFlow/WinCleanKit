@@ -196,6 +196,32 @@ $items = Get-TuiGroupAction $st
 Check 'scroll keeps the cursor visible' ($top -le $st.DetailIndex -and $st.DetailIndex -lt ($top + 12) -or $st.DetailIndex -ge $items.Count) ("top {0}, cursor {1}, items {2}" -f $top, $st.DetailIndex, $items.Count)
 
 # ---------------------------------------------------------------------------
+Write-Head 'the opening language chooser'
+# The chooser is what a user sees before any language has been picked, so it has to
+# lead to a fully working state in whichever language they choose.
+$ask = Initialize-TuiState -Catalog $cat -Preset 'balanced' -Language 'ask'
+Check 'ask opens the chooser' ($ask.Mode -eq 'language') ("mode is $($ask.Mode)")
+Check 'the chooser offers both languages' ((Get-TuiLanguageList) -join ',' -eq 'zh,en') ((Get-TuiLanguageList) -join ',')
+Check 'the chooser starts on the first language' ((Get-TuiLanguageChoice $ask) -eq 'zh') (Get-TuiLanguageChoice $ask)
+Check 'the chooser still knows the plan' ((Get-TuiPlan $ask).Count -gt 0) ("{0} actions" -f (Get-TuiPlan $ask).Count)
+$down = Move-TuiLanguageCursor -State $ask -Direction 'down'
+Check 'the cursor reaches English' ((Get-TuiLanguageChoice $down) -eq 'en') (Get-TuiLanguageChoice $down)
+Check 'the cursor clamps at the end' (((Move-TuiLanguageCursor -State $down -Direction 'down').LangIndex) -eq 1) 'no wrap'
+Check 'the cursor clamps at the start' (((Move-TuiLanguageCursor -State $ask -Direction 'up').LangIndex) -eq 0) 'no wrap'
+
+$zh2 = Select-TuiLanguageChoice -State $ask -Language 'zh'
+Check 'choosing zh leaves the chooser' ($zh2.Mode -eq 'list') ("mode is $($zh2.Mode)")
+Check 'choosing zh applies Chinese' ($zh2.Language -eq 'zh') (Get-TuiLanguageChoice $ask)
+Check 'choosing zh applies to the groups' ((@($zh2.Groups | Where-Object { Test-HasCjk $_.name }).Count) -ge ($zh2.Groups.Count - 1))
+Check 'choosing zh keeps the plan' (((Get-TuiPlan $zh2) -join ',') -eq ((Get-TuiPlan $ask) -join ',')) 'plan unchanged'
+$en2 = Select-TuiLanguageChoice -State $ask -Language 'en'
+Check 'choosing en applies English' ($en2.Language -eq 'en' -and (@($en2.Groups | Where-Object { Test-HasCjk $_.name }).Count) -eq 0)
+
+# A state built for a language must not open the chooser.
+$direct = Initialize-TuiState -Catalog $cat -Preset 'balanced' -Language 'en'
+Check 'an explicit language skips the chooser' ($direct.Mode -eq 'list') ("mode is $($direct.Mode)")
+
+# ---------------------------------------------------------------------------
 Write-Head 'language switching preserves work'
 $st = Initialize-TuiState -Catalog $cat -Preset 'aggressive' -Language 'en'
 $st = Switch-TuiAction -State $st -Id ((Get-TuiGroupAction $st)[0]).id

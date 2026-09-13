@@ -12,6 +12,36 @@ Run it from an **elevated** PowerShell for machine-level (`HKLM`) changes. Read-
 
 ---
 
+## Starting it
+
+Double-click `run.bat`, or run `src\WinCleanKit.bat`. Either way it elevates, then
+opens the full-screen interface.
+
+**It opens on a language chooser.** That screen is bilingual on purpose: it is shown
+before a language has been picked, so it says each line twice — Chinese first, then
+English. Press `1` for Chinese, `2` for English, or use the arrow keys and `Enter`.
+You can change your mind at any time with `l` inside the interface.
+
+To skip the chooser, name the language on the command line:
+
+```bat
+run.bat --lang zh
+run.bat --lang en
+run.bat --zh
+run.bat --en
+```
+
+| Switch | What it does |
+|---|---|
+| `--lang zh` / `--lang en` | Open in that language, with no chooser. |
+| `--lang=zh` / `--lang=en` | The same thing. |
+| `--zh` / `--en` | The same thing, spelled short. |
+| `--simple` / `--no-tui` | The numbered menu instead of the full-screen interface, for automation and screen readers. |
+
+An unrecognised value falls back to the chooser rather than guessing.
+
+---
+
 ## Modes
 
 | Option | What it does |
@@ -63,7 +93,8 @@ The rule that matters: **when `-Only` is present, the preset is only a label.** 
 
 | Option | Meaning |
 |---|---|
-| `-Language en\|zh` | Display language. Default `en`. The catalog carries both. |
+| `-Language en\|zh` | Display language for the engine's own output. Default `en`. The catalog carries both. |
+| `-TuiLanguage en\|zh\|ask` | The language the full-screen interface opens in. `ask` — the default — opens the chooser. |
 | `-NoPrompt` | Never ask. Required for unattended runs; without it you are asked to type `APPLY`. |
 | `-EmitJson` | Print a machine-readable result object on stdout. |
 

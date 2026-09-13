@@ -81,11 +81,16 @@ function Initialize-TuiState {
     <#
       Build the initial state. Groups are precomputed so navigation never has to
       filter the catalog, and the counts they carry are what the list pane shows.
+
+      Pass -Language 'ask' to open on the language chooser instead of in a language.
+      The chooser is bilingual, so it needs no language of its own; the state carries
+      'en' underneath it purely so every field is populated.
     #>
     [CmdletBinding()]
     param($Catalog, [string]$Preset = 'balanced', [string]$Language = 'en')
 
-    $lang = $Language
+    $ask = ($Language -eq 'ask')
+    $lang = if ($ask) { 'en' } else { $Language }
     $groups = New-Object System.Collections.ArrayList
     foreach ($c in $Catalog.categories) {
         $items = @($Catalog.actions | Where-Object { $_.category -eq $c.id })
@@ -104,14 +109,62 @@ function Initialize-TuiState {
         Groups      = $groups
         Preset      = $Preset
         Selected    = (Select-Preset -Catalog $Catalog -Preset $Preset)
-        Mode        = 'list'
+        Mode        = $(if ($ask) { 'language' } else { 'list' })
         ListIndex   = 0
         DetailIndex = 0
         Pane        = 'list'
         Language    = $lang
         Message     = ''
         ScrollTop   = 0
+        LangIndex   = 0
     }
+}
+
+function Get-TuiLanguageList {
+    <#
+      The languages the chooser offers, in the order it shows them. The first is
+      what the cursor starts on, so it is also the default.
+    #>
+    [CmdletBinding()]
+    param()
+    return @('zh', 'en')
+}
+
+function Move-TuiLanguageCursor {
+    <#
+      Move the chooser cursor. Two entries, so it clamps like every other cursor in
+      this interface rather than wrapping.
+    #>
+    [CmdletBinding()]
+    param($State, [ValidateSet('up', 'down')][string]$Direction)
+    $n = (Get-TuiLanguageList).Count
+    if ($Direction -eq 'up') { $State.LangIndex = [Math]::Max(0, $State.LangIndex - 1) }
+    else                     { $State.LangIndex = [Math]::Min($n - 1, $State.LangIndex + 1) }
+    return $State
+}
+
+function Get-TuiLanguageChoice {
+    <#
+      The language the chooser cursor is on.
+    #>
+    [CmdletBinding()]
+    param($State)
+    $langs = Get-TuiLanguageList
+    $i = [Math]::Max(0, [Math]::Min($State.LangIndex, $langs.Count - 1))
+    return $langs[$i]
+}
+
+function Select-TuiLanguageChoice {
+    <#
+      Resolve the opening chooser: rebuild the state in the chosen language and move
+      on to the list view.
+    #>
+    [CmdletBinding()]
+    param($State, [ValidateSet('zh', 'en')][string]$Language)
+    $picked = Select-TuiLanguage -State $State -Language $Language
+    $picked.Mode = 'list'
+    $picked.Pane = 'list'
+    return $picked
 }
 
 function Get-TuiGroupAction {

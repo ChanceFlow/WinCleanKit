@@ -186,6 +186,12 @@ function Get-TuiFrame {
     $inner = $w - 2                 # usable width inside the borders
     $lines = New-Object System.Collections.Generic.List[string]
 
+    # The opening language chooser is its own screen: it is shown before there is a
+    # language, so it says everything twice rather than picking one.
+    if ($State.Mode -eq 'language') {
+        return (Get-TuiLanguageFrame -State $State -Width $w -Height $h -Version $Version)
+    }
+
     # ---- header -----------------------------------------------------------
     $title = if ($zh) { 'WinCleanKit' } else { 'WinCleanKit' }
     $presetLabel = if ($zh) { '预设' } else { 'preset' }
@@ -405,6 +411,56 @@ function Get-TuiHelpBody {
     }
     while ($out.Count -lt $Height) { [void]$out.Add('|' + (' ' * $Width) + '|') }
     return , $out.ToArray()
+}
+
+function Get-TuiLanguageFrame {
+    <#
+      The opening language chooser, drawn the same way as every other frame so it
+      does not read as a different program: full width, exactly as tall as the
+      terminal, every row positioned absolutely when it is painted.
+
+      It is bilingual on purpose. It is shown before a language has been chosen, so
+      it cannot use one; saying each line twice also makes it obvious that both
+      languages are first class rather than a translation bolted on.
+    #>
+    [CmdletBinding()]
+    param($State, [int]$Width, [int]$Height, [string]$Version = '0.1.0')
+
+    $inner = $Width - 2
+    $langs = Get-TuiLanguageList
+    $marks = @()
+    foreach ($i in 0..($langs.Count - 1)) {
+        $marks += $(if ($i -eq $State.LangIndex) { '>' } else { ' ' })
+    }
+
+    $content = New-Object System.Collections.Generic.List[string]
+    [void]$content.Add('')
+    [void]$content.Add(("  WinCleanKit v{0}" -f $Version))
+    [void]$content.Add('')
+    [void]$content.Add('  请选择界面语言 / Choose your language')
+    [void]$content.Add('')
+    [void]$content.Add(("  {0} 1. 中文" -f $marks[0]))
+    [void]$content.Add(("  {0} 2. English" -f $marks[1]))
+    [void]$content.Add('')
+    [void]$content.Add('  按 1 或 2、方向键加回车；之后随时可按 l 切换')
+    [void]$content.Add('  Press 1 or 2, or arrows and Enter. Press l later to switch.')
+    [void]$content.Add('')
+
+    # Never taller than the terminal: that would scroll it before the user has even
+    # started. Trim from the end, then centre what is left.
+    $room = $Height - 2
+    while ($content.Count -gt $room) { $content.RemoveAt($content.Count - 1) }
+    $pad = [int](($room - $content.Count) / 2)
+
+    $lines = New-Object System.Collections.Generic.List[string]
+    [void]$lines.Add('+' + ('-' * $inner) + '+')
+    for ($i = 0; $i -lt $room; $i++) {
+        $j = $i - $pad
+        $text = if ($j -ge 0 -and $j -lt $content.Count) { $content[$j] } else { '' }
+        [void]$lines.Add('|' + (Format-TuiCell $text $inner) + '|')
+    }
+    [void]$lines.Add('+' + ('-' * $inner) + '+')
+    return , $lines.ToArray()
 }
 
 function Get-TuiConsoleMode {

@@ -219,6 +219,26 @@ $frameOff = (Get-TuiFrame -State $st -Width 120 -Height 34) -join "`n"
 Check 'deselected row shows [ ]' ($frameOff.Contains('[ ] ' + $first.title)) $first.id
 
 # ---------------------------------------------------------------------------
+Write-Head 'the opening language chooser'
+$ask = Initialize-TuiState -Catalog $cat -Preset 'balanced' -Language 'ask'
+foreach ($size in @(@(80, 24), @(100, 30), @(120, 40), @(60, 18))) {
+    $w = $size[0]; $h = $size[1]
+    $f = Get-TuiFrame -State $ask -Width $w -Height $h
+    $bad = @($f | Where-Object { (Get-WidthOf $_) -ne $w })
+    Check "chooser is $w wide ($w x $h)" ($bad.Count -eq 0) ("{0} bad of {1}" -f $bad.Count, $f.Count)
+    Check "chooser is exactly $h rows ($w x $h)" ($f.Count -eq $h) ("{0} rows" -f $f.Count)
+}
+$f = Get-TuiFrame -State $ask -Width 100 -Height 30
+$joined = $f -join "`n"
+Check 'the chooser names both languages' ($joined.Contains('中文') -and $joined.Contains('English')) 'both options listed'
+Check 'the chooser states the question twice' ($joined.Contains('请选择界面语言') -and $joined.Contains('Choose your language')) 'bilingual'
+Check 'the chooser marks the current option' ((@($f | Where-Object { $_ -match '> 1\. 中文' })).Count -eq 1) 'cursor on the first entry'
+$askDown = Move-TuiLanguageCursor -State $ask -Direction 'down'
+$f2 = Get-TuiFrame -State $askDown -Width 100 -Height 30
+Check 'the cursor follows the arrow key' ((@($f2 | Where-Object { $_ -match '> 2\. English' })).Count -eq 1) 'cursor moved'
+Check 'the chooser never reaches more rows than the terminal' ($f.Count -le 30) 'no scroll risk'
+
+# ---------------------------------------------------------------------------
 Write-Head 'help screen'
 $st = Select-TuiMode -State $st -Mode 'help'
 foreach ($lang in 'en', 'zh') {

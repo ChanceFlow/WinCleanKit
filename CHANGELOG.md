@@ -7,6 +7,14 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **A language chooser as the first screen.** The full-screen interface used to open
+  in English unconditionally, which is a poor welcome for anyone who cannot read it.
+  It now opens on a bilingual chooser — the one screen that cannot assume a language,
+  so it says each line twice. `1` picks Chinese, `2` picks English, the arrow keys and
+  `Enter` do the same, and `l` still switches at any time afterwards. Naming the
+  language up front skips the chooser: `run.bat --lang zh`, `--lang en`, `--lang=zh`,
+  `--zh`, `--en`. An unrecognised value falls back to the chooser rather than
+  guessing, and the plain menu (`--simple`) keeps its own default.
 - **`tools/Test-TuiScroll.ps1`** — the check the gates cannot make. It paints a
   frame in a real console window, repaints it, then reads the whole console buffer
   back and compares it against the frame it meant to draw. It also paints with the

@@ -211,6 +211,24 @@ function Show-TuiInteraction {
             Msg    = $state.Message
         }
 
+        # The opening language chooser owns the keyboard until it is answered, so
+        # it is handled before the main key map rather than inside it.
+        if ($state.Mode -eq 'language') {
+            switch ($key.Key) {
+                'UpArrow'   { $state = Move-TuiLanguageCursor -State $state -Direction 'up' }
+                'DownArrow' { $state = Move-TuiLanguageCursor -State $state -Direction 'down' }
+                'Enter'     { $state = Select-TuiLanguageChoice -State $state -Language (Get-TuiLanguageChoice $state) }
+                'Escape'    { $quit = $true }
+                default {
+                    if ($key.KeyChar -eq '1') { $state = Select-TuiLanguageChoice -State $state -Language 'zh' }
+                    if ($key.KeyChar -eq '2') { $state = Select-TuiLanguageChoice -State $state -Language 'en' }
+                    if ($key.KeyChar -eq 'q' -or $key.KeyChar -eq 'Q') { $quit = $true }
+                }
+            }
+            $dirty = $true
+            continue
+        }
+
         switch ($key.Key) {
             'UpArrow'   { $state = Move-TuiCursor -State $state -Direction 'up' }
             'DownArrow' { $state = Move-TuiCursor -State $state -Direction 'down' }

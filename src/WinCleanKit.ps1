@@ -78,8 +78,10 @@ param(
     [switch]   $NoTui,
     [ValidateSet('conservative', 'balanced', 'aggressive')]
     [string]   $TuiPreset = 'balanced',
-    [ValidateSet('en', 'zh')]
-    [string]   $TuiLanguage = 'en',
+    # 'ask' opens the TUI on its language chooser, which is the only way to offer
+    # the choice without already knowing which language the reader can read.
+    [ValidateSet('en', 'zh', 'ask')]
+    [string]   $TuiLanguage = 'ask',
     # Report the interactive outcome as an exit code rather than as text, so a
     # caller can tell "this console cannot draw" (3) from "the user quit" (0).
     # src\WinCleanKit.bat uses that difference to decide whether to fall back.
