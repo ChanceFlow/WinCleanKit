@@ -56,3 +56,28 @@ The restore journal covers settings, services and tasks. Deleted ad images stay 
 ## Not a hardening tool
 
 WinCleanKit reduces advertising and telemetry. It is not a security-hardening baseline, it does not configure Defender, firewall rules, BitLocker, or an application allowlist, and it should not be treated as one.
+
+## The automated gates cannot see what the terminal did with a frame
+
+`tests/Test-TuiRender.ps1` compares the lines a frame is built from, which says nothing
+about what the console does with them once they are written. Two real defects lived in
+that gap: every row ended with a line feed, so the screen scrolled one row on each
+repaint, and the language toggle switched the state while the loop decided nothing had
+moved, so `l` left the previous frame up.
+
+Both were found by driving the deployed build in a real session and reading the console
+back, not by eye:
+
+1. Launch the interface in the interactive session (an SSH session is session 0 and has
+   no console to draw into).
+2. From that session, `AttachConsole` to the engine's PowerShell process and read the
+   window with `ReadConsoleOutputCharacterW` — the buffer can be compared byte for byte
+   across keypresses, which is what turned "the frame looks right" into "the frame is
+   identical after `l`".
+3. Send keys with `SendKeys`/`SendInput` to the foreground console window to walk the
+   screens.
+
+`tools/Test-TuiScroll.ps1` is the one part of this that is committed and repeatable: it
+paints, repaints, reads the buffer back and fails if the screen scrolled, with the old
+painter as a control so a clean run cannot come from a test that detects nothing. The
+key-driving half is a manual procedure, and this is where it is written down.

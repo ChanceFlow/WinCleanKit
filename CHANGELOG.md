@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to
@@ -254,6 +254,11 @@ All notable changes to this project are documented here. The format follows
   `chcp` must keep stdin, no script path may be expanded after the working
   directory moves, every prompt must go through `:ask`, and `run.bat` must capture
   its folder before `cd` and call the launcher absolutely.
+- `docs/LIMITATIONS.md` records the one thing the gates cannot see: what the terminal
+  does with a frame after it is written. Both defects that lived there -- the one-row
+  scroll and the language toggle -- were found by driving the deployed build in a real
+  interactive session and reading the console buffer back, and the file now writes that
+  procedure down next to the committed, repeatable half (`tools/Test-TuiScroll.ps1`).
 - **What is still verified by hand, stated plainly:** the key loop itself. Reading
   keys and repainting needs a real interactive console, which no automated run has.
   It is kept deliberately thin, guarded statically by the parse and lint gates, and
