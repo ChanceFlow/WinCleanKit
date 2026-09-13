@@ -421,7 +421,7 @@ for /f "usebackq tokens=1,2,3,4,5,6 delims=|" %%A in (`%WCK_PSFULL% -NoProfile -
     if "%%F"=="1" (echo     [x] %%A. %%C   [%%D]) else (echo     [ ] %%A. %%C   [%%D])
 )
 echo.
-echo     输入编号切换该项;  A. 全部选中此预设;  N. 全部取消;  B. 返回
+echo     输入编号切换该项;  A. 全部选中此项;  N. 全部取消;  B. 返回
 echo.
 call :ask "  编号 / A / N / B: "
 if /i "%WCK_ANS%"=="b" exit /b 0
@@ -592,7 +592,7 @@ echo   Catalog  : catalog\catalog.json  (所有操作都是数据，可自行增
 echo   许可证   : MIT
 echo.
 echo   设计原则
-echo     * 用户决策权优先: 三档预设 + 分类选择 + 逐项开关 + 强制预览
+echo     * 用户决策权优先: 基础项默认 + 分类选择 + 逐项开关 + 强制预览
 echo     * 全量可回滚: 每次执行在桌面生成备份与一键还原脚本
 echo     * 不碰 hosts / 不碰个人文件 / 不碰壁纸与 OneDrive 数据目录
 echo     * 只做你选中的事，额外的一项都不做
