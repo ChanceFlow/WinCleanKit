@@ -9,15 +9,14 @@
 [![Gates](https://img.shields.io/badge/gates-8%20passing-22C55E.svg)](#仓库结构)
 
 [English](README.md) · **中文说明**  
-**文档:** [用法](docs/USAGE.zh-CN.md) ([EN](docs/USAGE.md)) · [安全](docs/SAFETY.zh-CN.md) ([EN](docs/SAFETY.md)) · [限制](docs/LIMITATIONS.zh-CN.md) ([EN](docs/LIMITATIONS.md)) · [行动目录](docs/CATALOG.md) · [代码规范](docs/LINTING.md)  
+**文档:** [用法](docs/USAGE.zh-CN.md) ([EN](docs/USAGE.md)) · [安全](docs/SAFETY.zh-CN.md) ([EN](docs/SAFETY.md)) · [限制](docs/LIMITATIONS.zh-CN.md) ([EN](docs/LIMITATIONS.md)) · [行动目录](docs/CATALOG.md) ([中文](docs/CATALOG.zh-CN.md)) · [代码规范](docs/LINTING.md)  
 **项目:** [参与贡献](CONTRIBUTING.zh-CN.md) ([EN](CONTRIBUTING.md)) · [安全政策](SECURITY.zh-CN.md) ([EN](SECURITY.md)) · [行为准则](CODE_OF_CONDUCT.zh-CN.md) ([EN](CODE_OF_CONDUCT.md)) · [更新日志](CHANGELOG.md) · [许可证](LICENSE)
 
 ---
 
 ## 界面长什么样
 
-全屏 TUI，纯键盘操作。方向键移动，`Tab` 切换面板，`空格` 勾选 —— 右侧面板在你动手之前
-就回答「这到底会改什么」：
+全屏 TUI，纯键盘操作。方向键移动，`Tab` 切换面板，`空格` 勾选 —— 左下角的双模态详情面板在你动手之前就回答「为什么有这一项」与「这到底会改什么」：
 
 ```text
 +--------------------------------------------------------------------------------------------+
@@ -50,15 +49,17 @@
 
 | 按键 | 作用 |
 |---|---|
-| `↑` `↓` | 在当前面板内移动 |
-| `Tab` | 在分类面板与动作面板之间切换 |
-| `Enter` | 进入分类；在动作面板中勾选并下移 |
-| `空格` | 勾选 / 取消当前动作 |
-| `a` / `n` | 选中 / 取消当前分类全部 |
-| `A` / `N` | 选中 / 取消全部 |
-| `l` | 切换界面语言（中 / 英） |
-| `p` / `x` / `q` | 预览计划 / 执行 / 退出 |
-| `?` | 应用内帮助 |
+| `↑` / `↓` | 在当前焦点面板内移动光标 |
+| `Tab` | 在左侧分类面板与右侧条目面板之间切换焦点 |
+| `Enter` | 进入分类；在条目面板中勾选并自动下移一行 |
+| `空格` | 勾选 / 取消当前条目 |
+| `a` / `n` | 选中 / 清空当前分类下的全部动作 |
+| `A` / `N` | 选中 / 清空全表 74 项操作 |
+| `l` | 即时切换界面语言（中文 ⇄ English） |
+| `p` | 完整预览执行计划（只读，不修改任何系统设置） |
+| `x` | 确认执行选中的计划（执行前先在桌面建好还原点） |
+| `q` / `Esc` | 安全退出（未确认前不会改变系统任何东西） |
+| `?` | 呼出应用内键位说明与帮助 |
 
 TUI **不重复实现**任何保护你的逻辑：预览调用引擎自己的计划渲染，执行时把选中的 id
 交回引擎：
@@ -67,30 +68,45 @@ TUI **不重复实现**任何保护你的逻辑：预览调用引擎自己的计
    ------------------------------------------------------------------
    WinCleanKit 0.1.0
    ------------------------------------------------------------------
-   Selected : 74 action(s)
+   Selected : 45 action(s)
    Mode     : PREVIEW ONLY
 
-   Ads & suggestions         22 action(s)
-     [low ] Forbid silent app installation
-     [low ] Disable subscribed content (recommendations/ads)
-     [MED ] Hide Settings home page promos
+   系统广告与推荐                20 action(s)
+     禁止静默自动安装应用
+     关闭订阅内容(推荐/广告)
+     关闭桌面 Spotlight 广告图
+     ...
 
-   Total actions : 74
+   遥测与诊断数据                17 action(s)
+     设置诊断数据为最低允许级别
+     将旧位 AllowTelemetry 设为 0
+     ...
+
+   隐私加固                      7 action(s)
+     关闭用于定向广告的广告 ID
+     ...
+
+   广告图缓存与壁纸              1 action(s)
+     删除已下载的 Spotlight 广告图缓存
+
+   Total actions : 45
 ```
 
-执行时带进度计数，且只有**一套**状态词表；含义由文字标记承载，**不依赖颜色**：
+执行时带实时进度计数，且只有**一套**状态词表；含义由文字标记承载，**不依赖颜色**：
 
 ```text
-   [ok]  [  1/74]   1%  禁止静默自动安装应用 — HKCU\SilentInstalledAppsEnabled = 0
-   [--]  [  5/74]   6%  卸载 Windows 地图 — not installed
-   [!!]  [ 12/74]  16%  隐藏设置首页推广区块 — key accepted the write but dropped it
-   [XX]  [ 40/74]  54%  某动作 — access denied
+   [ok]  [  1/45]   2%  禁止静默自动安装应用 — HKCU\SilentInstalledAppsEnabled = 0
+   [--]  [  5/45]  11%  禁用 DiagTrack 服务 — not installed
+   [!!]  [ 12/45]  26%  隐藏设置首页推广区块 — key accepted the write but dropped it
+   [XX]  [ 40/45]  88%  某动作 — access denied
 ```
 
 图例：`[ok]` 已生效 · `[dry]` 将生效 · `[--]` 不适用 · `[!!]` 已跳过或受保护 · `[XX]` 失败。
 
 > **终端不支持全屏界面？** 用 `run.bat --simple`（或 `WinCleanKit.ps1 -Tui:$false`）
-> 走纯文本编号菜单。TUI 自己也会检测并降级，而不会把转义码灌进日志。
+> 走轻量编号菜单。TUI 遇到非交互或无 ANSI 支持的环境也会自动降级，而不会把控制台转义码乱打进日志。
+
+---
 
 ## 为什么还要再做一个？
 
@@ -100,11 +116,12 @@ WinCleanKit 反过来设计：
 
 | 原则 | 落到实处的做法 |
 |---|---|
-| **你说了算** | 基础项默认勾好，其余一个空格就能选上。**你没选的，一条都不执行。** |
-| **先看见再动手** | 每条操作都带大白话的「为什么」——它改什么、代价是什么，以及独立的预览步骤。 |
-| **永远退得回去** | 每次执行都在桌面生成带时间戳的备份 + 一键还原脚本。 |
-| **广告图是图，不是设置** | 会删广告图，但绝不碰你的壁纸。 |
+| **你说了算** | 安全的基础项（45 项）默认勾好，其余一个空格就能选上。**你没选的，一条都不执行。** |
+| **先看见再动手** | 每条操作都带大白话的说明 —— 它改什么、为什么改、代价是什么。 |
+| **永远退得回去** | 动任何设置前，先在桌面生成带时间戳的备份文件夹与一键还原脚本。 |
+| **广告图是图，不是设置** | 清理下载的锁屏广告图缓存，但绝不碰你当前的壁纸，更不会替你换壁纸。 |
 | **你的数据不关它的事** | 不修改 `hosts`、不碰个人文件、绝不靠近你的 OneDrive 数据目录。 |
+| **没有隐藏档位或隐式重置** | 取消勾选就一直生效；不存在所谓激进档位会在切换时把你已做的选择推翻。 |
 
 ---
 
@@ -112,39 +129,42 @@ WinCleanKit 反过来设计：
 
 ```text
 1.  下载或克隆本仓库
-2.  双击  run.bat
-3.  同意 UAC 提权                （改机器级设置需要管理员权限）
-4.  看计划、按需增减勾选 → 输入 APPLY
+2.  双击运行 run.bat                  （终端下亦可直接执行）
+3.  按需选择界面语言                  （首次启动提供双语选择：1 中文，2 English；可用 --zh / --en 跳过）
+4.  查看计划、按需调整勾选            （空格键切换，Enter 逐项下移）
+5.  按 x 键执行计划                   （改动前自动在桌面创建完整还原点）
 ```
 
 在你于最终确认处输入 `APPLY` 之前**什么都不会发生**；而一轮运行做的第一件事，
 就是在桌面写下回滚点。
 
 <a id="环境要求"></a>
+> **环境要求**：Windows 10 1809+ / Windows 11 · Windows PowerShell 5.1 或 PowerShell 7+ · 修改机器级设置（`HKLM`）需要管理员权限。
+> 即使跑完本工具，Windows 11 专业版/家庭版仍会发送**必需**级诊断数据 —— 这是平台限制，不是设置能绕过的，详见[已知限制](docs/LIMITATIONS.zh-CN.md)。
 
-> **环境要求**：Windows 10 1809+ / Windows 11 · Windows PowerShell 5.1 或 PowerShell 7+ · 修改 `HKLM` 需要管理员权限。
-> 即使跑完本工具，Windows 11 专业版/家庭版仍会发送**必需**级诊断数据 —— 这是平台限制，不是设置能绕过的，见[已知限制](docs/LIMITATIONS.md)。
+喜欢用命令行？`src\WinCleanKit.ps1` 就是完整引擎，所有决定都可以通过参数传入 —— 详见[命令行](#命令行)。
 
 ### 默认勾选了什么
 
 **没有起步前要先选的档位。** catalog 里标了 `default` 的 **74 项中的 45 项**就是默认集 ——
-取舍最小的那些，最坏情况也只是少了个推广位或后台采集器 —— 界面打开时正好勾选这些。
+取舍最小的那些，最坏情况也只是少了个商业推广位或后台采集器 —— 界面打开时正好勾选这些。
 其余全部是选装：
 
 | | 项数 | 覆盖内容 |
 |---|---|---|
-| **默认勾选** | 45 | 广告与推荐、最安全的遥测开关、隐私偏好。除广告消失外没有可见行为变化。 |
-| **需要自己选** | 29 | 错误报告与兼容性服务、预装消费类应用，以及有真实取舍的项目：游戏栏、OneDrive、定位、设置同步、新版 Outlook、手机连接。 |
+| **默认勾选** | 45 | 系统广告与推荐（20 项）、最安全的遥测开关（17 项）、隐私偏好（7 项）、广告图缓存（1 项）。除广告消失外无任何可见副作用。 |
+| **需要自己选** | 29 | 预装应用卸载（19 项）、OneDrive 客户端移除（1 项）、诊断错误报告（4 项），以及有真实取舍的项目（3 项）：定位、设置同步、手写/键入个性化。 |
 
 **加回去这件事不存在。** 关掉一项就是关掉，打开一项也只是一个空格 —— 没有哪一档会在你切换时
-把已做的选择推翻。这条分界由 `tests/Test-Catalog.ps1` 强制保证，其中还包括「卸载软件类的动作
-一律不在默认集内」。
+把已做的选择推翻。这条分界由 `tests/Test-Catalog.ps1` 强制保证，其中还包括**「卸载软件类的动作
+一律不在默认集内」**。
 
 ---
 
 ## 命令行
 
-`.bat` 只是 `src\WinCleanKit.ps1` 的前端。引擎可以单独使用，因此脚本化与无人值守都很方便。
+`run.bat` 只是 `src\WinCleanKit.ps1` 的提权与启动包装。PowerShell 引擎完全可以独立运行，
+便于自动化部署、CI 与无人值守执行。
 
 ```powershell
 # 以 JSON 输出 catalog 的全部内容
@@ -153,7 +173,7 @@ WinCleanKit 反过来设计：
 # 预览默认集（不修改任何东西）
 .\src\WinCleanKit.ps1 -Plan
 
-# 只预览两条，中文界面
+# 只预览指定两项，中文界面输出
 .\src\WinCleanKit.ps1 -Plan -Only 'ads.cdm.silent-install,apps.maps' -Language zh
 
 # 无人值守执行整个分类
@@ -165,72 +185,78 @@ WinCleanKit 反过来设计：
 # 用默认集，但剔除你不同意的几项
 .\src\WinCleanKit.ps1 -Apply -NoPrompt -Skip 'apps.xbox,apps.outlook-new'
 
-# 查看与使用还原点
+# 查看与使用桌面备份还原点
 .\src\WinCleanKit.ps1 -ListRestores
 .\src\WinCleanKit.ps1 -Restore WinCleanKit-20260913-004942
 ```
 
-`-Only` 是**权威列表**：一旦传入，默认集完全不参与，选中集合就是你指定的那些。这正是「逐项取消勾选」能可靠生效的原因。
+`-Only` 是**权威列表**：一旦传入，默认集完全不参与，选中集合就是你指定的那些。这保证了程序化
+调用的绝对可预期性。
 
-完整参数说明见 [docs/USAGE.md](docs/USAGE.md)。
+完整参数说明见[用法文档](docs/USAGE.zh-CN.md)。
 
 ---
 
 ## 它能改什么
 
-6 个分类、74 条操作。**每一条都是数据**，写在 [`catalog/catalog.json`](catalog/catalog.json) 里，而不是硬编码逻辑。增删一条操作、改一句说明，都只是改 JSON，UI 和引擎会自动跟上。
+6 个分类、74 条操作。**每一条都是数据**，写在 [`catalog/catalog.json`](catalog/catalog.json) 里，
+而不是埋在过程式脚本里。增删一条操作、改一句说明，都只是改 JSON，UI、引擎与文档会自动跟上。
 
-| 分类 | 数量 | 例子 |
-|---|---|---|
-| 系统广告与推荐 | 22 | 静默装应用、锁屏 Spotlight 广告、开始菜单推荐、小组件资讯流、搜索框联网推荐、Edge 推广标签 |
-| 遥测与诊断数据 | 21 | `DiagTrack`、兼容性评估、CEIP 上报、错误报告、反馈请求 |
-| 预装应用 | 19 | Clipchamp、Dev Home、纸牌、Office Hub、Bing 资讯/天气、Xbox 覆盖层 |
-| OneDrive | 1 | 移除客户端并阻止重装 |
-| 隐私加固 | 9 | 广告 ID、输入个性化、文本/手写隐式采集、定位、设置同步 |
-| 广告图缓存与壁纸 | 1 | 删除已下载的 Spotlight 广告图 |
+| 分类 | 总数 | 默认 | 例子 |
+|---|---|---|---|
+| 系统广告与推荐 | 22 | 20 | 静默装应用、锁屏 Spotlight 广告、开始菜单推荐、小组件资讯流、搜索框联网推荐、Edge 推广标签 |
+| 遥测与诊断数据 | 21 | 17 | `DiagTrack`、兼容性评估、CEIP 上报、错误报告、反馈请求 |
+| 预装应用 | 19 | 0 | Clipchamp、Dev Home、纸牌、Office Hub、Bing 资讯/天气、Xbox 覆盖层 |
+| OneDrive | 1 | 0 | 移除客户端并阻止重装 |
+| 隐私加固 | 10 | 7 | 广告 ID、输入个性化、文本/手写隐式采集、定位、设置同步 |
+| 广告图缓存与壁纸 | 1 | 1 | 删除已下载的 Spotlight 广告图缓存 |
+| **合计** | **74** | **45** | |
 
-每条操作都写明了它改什么、代价是什么、为什么存在。完整清单见 [docs/CATALOG.md](docs/CATALOG.md)。
+每条操作都写明了它改什么、触及哪些注册表/服务、代价是什么以及可逆性。完整清单见[行动目录](docs/CATALOG.zh-CN.md)（双语详情直达 [CATALOG.md](docs/CATALOG.md)）。
 
 ### 明确不做的事
 
 以下是设计上**有意不做**的：
 
-- **不修改 `hosts` 文件。** 用那种方式屏蔽微软域名可能破坏 Windows Update、Store，在办公机器上还会打断 VPN 与 SSO 登录。
+- **不修改 `hosts` 文件。** 用 DNS 方式屏蔽微软域名可能破坏 Windows Update、Microsoft Store，在办公机器上还会打断 VPN 与 SSO 登录。
 - **不碰个人文件、壁纸、OneDrive 数据目录。**
-- **不关闭 Windows Update。** 安全补丁不是牛皮癣。
-- **不关闭传递优化服务。** 它是更新加速器，不是遥测。（其 P2P 共享可以单独关。）
-- **不搞坏 Edge。** 只关它的推广标签页，不卸载浏览器。
+- **不关闭 Windows Update。** 安全补丁是关键系统基础设施，不是牛皮癣。
+- **不整体关闭传递优化服务。** 它是本地与网络更新加速器；其 P2P 上传共享可单独关闭，无需强杀服务。
+- **不搞坏 Microsoft Edge。** 只关它的推广标签页与弹窗推荐；不强拆底层 WebView2 依赖的浏览器引擎。
 
 ---
 
 ## 安全与回滚
 
-动手之前，WinCleanKit 会先创建：
+动手之前，WinCleanKit 会在桌面自动创建完整的独立还原包：
 
-```
+```text
 桌面\WinCleanKit-<时间戳>\
 ├── backup.json                 全部原始值，逐字节记录
-├── Restore-WinCleanKit.ps1     整轮操作的一键还原
-└── run.log                     每条操作一行，含跳过与失败
+├── Restore-WinCleanKit.ps1     整轮操作的一键还原脚本
+└── run.log                     每条操作一行，含生效、跳过与失败记录
 ```
+
+如需还原之前的改动：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\Desktop\WinCleanKit-<时间戳>\Restore-WinCleanKit.ps1"
 ```
 
-注册表值会被精确还原，服务回到原启动类型，计划任务重新启用。被卸载的 Store 应用不会自动重新下载（还原脚本会告诉你该重装哪些）。在**工作机器**上运行前请先读 [docs/SAFETY.md](docs/SAFETY.md)。
+注册表值会被精确还原，服务回到原启动类型，计划任务重新启用。被卸载的 Store 应用不会在后台自动重新下载（还原脚本会列出具体包名，方便你按需在应用商店重新安装）。在**工作机器**上运行前请先读[安全说明](docs/SAFETY.zh-CN.md)。
 
 ---
 
 ## 仓库结构
 
-```
+```text
 WinCleanKit/
 ├── run.bat                      双击入口（大多数人只需要这个）
 ├── src/
 │   ├── WinCleanKit.bat          交互前端：提权、菜单、确认
 │   ├── WinCleanKit.ps1          引擎 + 终端设计系统
-│   └── menu/menu.ps1            菜单数据提供者（让 bat 不必解析 JSON）
+│   ├── menu/menu.ps1            菜单数据提供者（让 bat 不必解析 JSON）
+│   └── lib/                     TUI 核心实现（纯逻辑、渲染器、输入循环）
 ├── catalog/catalog.json         全部 74 条操作，以数据形式存在
 ├── docs/                        目录、用法、安全、限制、代码规范
 ├── tests/                       八道门禁：含 TUI 逻辑与布局
@@ -261,12 +287,14 @@ WinCleanKit/
 - **颜色从来不是唯一信号。** 每种状态都有文字标记（`[ok]`、`[dry]`、`[--]`、`[!!]`、`[XX]`），
   并且当输出被重定向、进入管道或设置了 `NO_COLOR` 时，颜色会降级为纯文本 ——
   日志与 CI 采集因此始终干净。
-- **长任务有进度。** 74 条动作会打印 `[ 12/74]  16%`，绝不会看起来卡死。
+- **长任务有进度。** 运行过程会打印 `[ 12/45]  26%`，绝不会看起来卡死。
 - **不闪屏。** 前端改用光标归位、在原帧上重绘，而不是每屏都 `CLS`；同时保留最近 25 行作为回看。
+
+---
 
 ## 参与贡献
 
-新增一条操作通常只是改一小段 JSON。请先读 [CONTRIBUTING.md](CONTRIBUTING.md) —— 里面说明了默认集规则，以及一句好的 `why` 该长什么样。
+新增一条操作通常只是改一小段 JSON。请先读[贡献指南](CONTRIBUTING.zh-CN.md) —— 里面说明了默认集规则，以及一句好的 `why` 说明该长什么样。
 
 ```powershell
 # 语法门禁：PowerShell 解析器 + 文件编码规则
@@ -291,9 +319,17 @@ WinCleanKit/
 .\tests\Test-TuiRender.ps1
 ```
 
-八道门禁在 CI 中都会跑。当前状态：解析器 37 项、PSScriptAnalyzer
-`0 Error / 0 Warning`、文档 5 项（229 条链接）、Catalog 31 项、Engine 23 项、
-TUI 逻辑 55 项、TUI 布局 50 项。详见 [LINTING.md](docs/LINTING.md)。
+八道门禁在 CI 中都会跑。当前状态：
+- **Test-Parse.ps1**: 59 项通过（PowerShell 语法解析、UTF-8 BOM 约束、单 BOM 校验、批处理启动器规范）
+- **Test-Analyzer.ps1**: CLEAN（PSScriptAnalyzer 1.25.0 下 `0 Error / 0 Warning`）
+- **Test-Docs.ps1**: 5 项全过（231 条相对链接可达、双语文档互链完备、0 处私有内网地址）
+- **New-CatalogDoc.ps1 -Check**: 生成的 `docs/CATALOG.md` 为最新状态
+- **Test-Catalog.ps1**: 32 项（模式合法性、安全约束、默认勾选集不变式）
+- **Test-Engine.ps1**: 25 项（选择语义、dry-run 纯度、双语输出一致性）
+- **Test-Tui.ps1**: 83 项（TUI 导航、选择集、重绘特征戳、语言选择器、滚动视口算法）
+- **Test-TuiRender.ps1**: 98 项（防滚动绘制契约、边框几何结构、双模态详情面板、ANSI 控制）
+
+详见[代码规范与门禁说明](docs/LINTING.md)。
 
 ---
 

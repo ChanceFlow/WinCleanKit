@@ -17,8 +17,8 @@
 ## What it looks like
 
 A full-screen TUI, driven entirely by the keyboard. Arrow keys move, `Tab` switches
-panes, `space` toggles an action — and the right pane answers "what will this
-actually touch?" before you commit to anything:
+panes, `space` toggles an action — and the dual-modal detail panel at the bottom-left
+answers "what will this actually touch?" and "why does this exist?" before you commit to anything:
 
 ```text
 +--------------------------------------------------------------------------------------------+
@@ -51,15 +51,17 @@ actually touch?" before you commit to anything:
 
 | Key | Action |
 |---|---|
-| `up` `down` | move within the focused pane |
-| `Tab` | switch between the category pane and the action pane |
-| `Enter` | open a category; in the action pane, toggle and step down |
-| `space` | toggle the current action |
-| `a` / `n` | select / clear every action in the category |
-| `A` / `N` | select / clear everything |
-| `l` | switch interface language (English / Chinese) |
-| `p` / `x` / `q` | preview the plan / apply it / quit |
-| `?` | the same help, in-app |
+| `up` / `down` | Move cursor within the focused pane |
+| `Tab` | Switch between category pane (left) and action pane (right) |
+| `Enter` | Enter a category; in the action pane, toggle checkbox and step down |
+| `space` | Toggle the focused action checkbox |
+| `a` / `n` | Select / clear all actions in the focused category |
+| `A` / `N` | Select / clear all 74 actions across the entire catalog |
+| `l` | Switch interface language (`en` ⇄ `zh`) on the fly |
+| `p` | Preview the full execution plan (changes nothing) |
+| `x` | Apply the selected plan (creates desktop restore point first) |
+| `q` / `Esc` | Quit safely (nothing changes until confirmed) |
+| `?` | Show in-app keyboard shortcuts and help |
 
 The TUI does not reimplement anything that keeps you safe. Previewing calls the
 engine's own plan renderer, and applying hands the chosen ids back to the engine:
@@ -68,47 +70,65 @@ engine's own plan renderer, and applying hands the chosen ids back to the engine
    ------------------------------------------------------------------
    WinCleanKit 0.1.0
    ------------------------------------------------------------------
-   Selected : 74 action(s)
+   Selected : 45 action(s)
    Mode     : PREVIEW ONLY
 
-   Ads & suggestions         22 action(s)
-     [low ] Forbid silent app installation
-     [low ] Disable subscribed content (recommendations/ads)
-     [MED ] Hide Settings home page promos
+   Ads & suggestions             20 action(s)
+     Forbid silent app installation
+     Disable subscribed content (recommendations/ads)
+     Disable Windows Spotlight desktop ad
+     ...
 
-   Total actions : 74
+   Telemetry & diagnostics       17 action(s)
+     Set diagnostic data to lowest allowed level
+     Set legacy AllowTelemetry to 0
+     ...
+
+   Privacy                       7 action(s)
+     Disable advertising ID for relevant ads
+     ...
+
+   Ad cache & wallpaper          1 action(s)
+     Delete Spotlight downloaded ad image cache
+
+   Total actions : 45
 ```
 
-Applying it — a progress counter, and one status vocabulary where the text marker
+Applying it — a real-time progress counter, and one status vocabulary where the text marker
 carries the meaning, so nothing depends on colour:
 
 ```text
-   [ok]  [  1/74]   1%  Forbid silent app installation — HKCU\SilentInstalledAppsEnabled = 0
-   [--]  [  5/74]   6%  Uninstall Windows Maps — not installed
-   [!!]  [ 12/74]  16%  Hide Settings home page promos — key accepted the write but dropped it
-   [XX]  [ 40/74]  54%  Something — access denied
+   [ok]  [  1/45]   2%  Forbid silent app installation — HKCU\SilentInstalledAppsEnabled = 0
+   [--]  [  5/45]  11%  Disable DiagTrack service — not installed
+   [!!]  [ 12/45]  26%  Hide Settings home page promos — key accepted the write but dropped it
+   [XX]  [ 40/45]  88%  Something — access denied
 ```
 
 Legend: `[ok]` applied · `[dry]` would apply · `[--]` not applicable · `[!!]` skipped or protected · `[XX]` failed.
 
-> **No console for a full-screen UI?** `run.bat --simple` (or
-> `WinCleanKit.ps1 -Tui:$false`) gives you the plain numbered menu instead. The TUI
-> also detects that situation itself and falls back, rather than painting escape
-> codes into a log file.
+> **No console for a full-screen UI?** `run.bat --simple` (or `WinCleanKit.ps1 -Tui:$false`)
+> drops into the accessible numbered menu instead. The TUI also detects non-interactive
+> or non-ANSI environments automatically and falls back cleanly, rather than spewing
+> escape codes into log files.
+
+---
 
 ## Why another de-bloater?
 
-Most de-bloat scripts are a wall of `reg add` commands that fire immediately and tell you afterwards what they did. You have no idea what is about to change, no way to disagree with any of it, and no clean way back.
+Most de-bloat scripts are a wall of `reg add` commands that fire immediately and tell you
+afterwards what they did. You have no idea what is about to change, no way to disagree with
+any of it, and no clean way back.
 
 WinCleanKit is built the other way round:
 
 | Principle | What it means in practice |
 |---|---|
-| **You decide** | The basics are on to start with; everything else is one toggle away. Nothing runs that you did not select. |
-| **You see it first** | Every action carries a plain-language *why* — what it changes and what it costs — and a preview step. |
-| **You can always go back** | Each run writes a timestamped backup plus a self-contained restore script to your Desktop. |
-| **Already-downloaded images are images, not settings** | It deletes ad images but refuses to touch your wallpaper. |
-| **Your data is not its business** | It never modifies `hosts`, never touches personal files, and never goes near your OneDrive data folder. |
+| **You decide** | The safe basics (45 actions) are checked by default; everything else is one toggle away. Nothing runs that you did not select. |
+| **You see it first** | Every action carries a plain-language explanation — what it changes, why it is here, and what trade-offs it carries. |
+| **You can always go back** | Each run writes a timestamped backup folder plus a self-contained restore script to your Desktop before touching a single setting. |
+| **Already-downloaded images are images, not settings** | It cleans ad image caches but strictly refuses to touch or overwrite your personal wallpaper. |
+| **Your data is not its business** | It never modifies `hosts`, never touches personal files, and never touches your OneDrive data folder. |
+| **No hidden tiers or resets** | Deselecting an item stays deselected; there are no aggressive preset tiers to silently undo your custom choices. |
 
 ---
 
@@ -116,43 +136,45 @@ WinCleanKit is built the other way round:
 
 ```text
 1.  Download or clone this repository
-2.  Double-click  run.bat
-3.  Accept the elevation prompt        (machine-level changes need admin)
-4.  Read the plan, adjust the checkboxes, then type APPLY
+2.  Double-click  run.bat               (or run in terminal)
+3.  Choose your language               (opens bilingual chooser; skip with --zh or --en)
+4.  Review the plan, toggle checkboxes (space to toggle, Enter to step down)
+5.  Press x to apply                   (creates desktop rollback point first)
 ```
 
-Nothing is written until you type `APPLY` at the final confirmation, and the first
-thing a run does is write a rollback point to your Desktop.
+Nothing is written until you confirm the plan, and the first thing a run does is write a
+rollback point to your Desktop.
 
 <a id="requirements"></a>
-> **Requirements:** Windows 10 1809+ or Windows 11 · Windows PowerShell 5.1 or PowerShell 7+ · administrator rights for `HKLM` changes.
+> **Requirements:** Windows 10 1809+ or Windows 11 · Windows PowerShell 5.1 or PowerShell 7+ · administrator rights for machine-level (`HKLM`) changes.
 > Windows 11 Pro/Home will still send *Required* diagnostic data even after this tool runs — that is a platform limit, not a setting. See [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
-Prefer the command line? `src\WinCleanKit.ps1` is the whole engine and takes the same
-decisions as flags — see [Command line](#command-line).
+Prefer the command line? `src\WinCleanKit.ps1` is the full engine and accepts all decisions
+as flags — see [Command line](#command-line).
 
 ### What is on by default
 
-There is no tier to choose before you start. The catalog marks **45 of the 74
-actions** as the default set — the low-trade-off ones, where the worst case is a
-promotion or a background collector going away — and the interface opens with
-exactly those checked. Everything else is opt-in:
+There is no tier to choose before you start. The catalog marks **45 of the 74 actions**
+as the default set — the low-trade-off ones, where the worst case is a commercial promotion
+or background collector going away — and the interface opens with exactly those checked.
+Everything else is opt-in:
 
 | | Actions | What it covers |
 |---|---|---|
-| **On at start** | 45 | Ads and suggestions, the safest telemetry switches, the privacy preferences. No visible behaviour change beyond the ads disappearing. |
-| **Opt-in** | 29 | Error-reporting and compatibility services, the bundled consumer apps, and the items with a real trade-off: Game Bar overlay, OneDrive, location, settings sync, the new Outlook, Phone Link. |
+| **On at start** | 45 | Windows ads and suggestions (20), safe telemetry switches (17), privacy preferences (7), and ad image cache (1). No visible behaviour change beyond ads disappearing. |
+| **Opt-in** | 29 | Preinstalled Store apps (19), OneDrive client removal (1), diagnostic error reporting (4), and real trade-off items (3): location, settings sync, text/typing personalization. |
 
-Nothing is ever added back. Turning an action off leaves it off, and turning one on
-is a single `space` — there is no tier to re-apply that would undo either. The split
-is enforced by `tests/Test-Catalog.ps1`, which also asserts that nothing that
-uninstalls software is on by default.
+Nothing is ever re-added behind your back. Turning an action off leaves it off, and turning one on
+is a single `space` — there is no preset to re-apply that would overwrite your choices. The split
+is enforced by `tests/Test-Catalog.ps1`, which also asserts that **nothing that uninstalls software
+is on by default**.
 
 ---
 
 ## Command line
 
-The `.bat` is a front-end for `src\WinCleanKit.ps1`. The engine works fine on its own, which makes unattended and scripted use easy.
+`run.bat` is an elevation and launcher wrapper for `src\WinCleanKit.ps1`. The PowerShell
+engine works completely standalone for automation, CI, and scripting.
 
 ```powershell
 # Show everything the catalog knows, as JSON
@@ -161,7 +183,7 @@ The `.bat` is a front-end for `src\WinCleanKit.ps1`. The engine works fine on it
 # Preview the default selection (changes nothing)
 .\src\WinCleanKit.ps1 -Plan
 
-# Preview exactly two actions, in Chinese
+# Preview specific actions with Chinese output
 .\src\WinCleanKit.ps1 -Plan -Only 'ads.cdm.silent-install,apps.maps' -Language zh
 
 # Apply a whole category unattended
@@ -170,15 +192,17 @@ The `.bat` is a front-end for `src\WinCleanKit.ps1`. The engine works fine on it
 # Apply a hand-picked list from a file (one id per line, '#' comments allowed)
 .\src\WinCleanKit.ps1 -Apply -NoPrompt -FromFile .\my-selection.txt
 
-# Apply the default selection minus a few things you disagree with
+# Apply the default selection minus a few specific items
 .\src\WinCleanKit.ps1 -Apply -NoPrompt -Skip 'apps.xbox,apps.outlook-new'
 
-# See and use restore points
+# List and restore from desktop backup points
 .\src\WinCleanKit.ps1 -ListRestores
 .\src\WinCleanKit.ps1 -Restore WinCleanKit-20260913-004942
 ```
 
-`-Only` is **authoritative**: when you pass it, the selection is exactly what you asked for and the default set contributes nothing. This is what makes per-item deselection work reliably.
+`-Only` is **authoritative**: when you pass it, the selection is exactly what you asked for
+and the default set contributes nothing. This ensures programmatic selection remains completely
+predictable.
 
 Full parameter reference: [docs/USAGE.md](docs/USAGE.md).
 
@@ -186,59 +210,66 @@ Full parameter reference: [docs/USAGE.md](docs/USAGE.md).
 
 ## What it can change
 
-74 actions in 6 categories. **Every one of them is data**, in [`catalog/catalog.json`](catalog/catalog.json) — not hardcoded logic. Adding, removing or re-wording an action is a JSON edit, and the UI and the engine pick it up automatically.
+74 actions in 6 categories. **Every single action is data**, defined in
+[`catalog/catalog.json`](catalog/catalog.json) — not buried in procedural script code.
+Adding, removing or re-wording an action is a JSON edit, and the UI, engine, and docs
+pick it up automatically.
 
-| Category | Count | Examples |
-|---|---|---|
-| Windows ads & suggestions | 22 | silent app installation, Spotlight lock-screen ads, Start menu recommendations, widget feed, search box web suggestions, Edge promo tabs |
-| Telemetry & diagnostic data | 21 | `DiagTrack`, compatibility appraiser, CEIP uploads, error reporting, feedback prompts |
-| Preinstalled apps | 19 | Clipchamp, Dev Home, Solitaire, Office Hub, Bing News/Weather, Xbox overlay |
-| OneDrive | 1 | remove the client and block reinstall |
-| Privacy hardening | 9 | advertising ID, input personalization, implicit text/ink collection, location, settings sync |
-| Ad image cache & wallpaper | 1 | delete downloaded Spotlight ad images |
+| Category | Total | Default | Examples |
+|---|---|---|---|
+| Windows ads & suggestions | 22 | 20 | Silent app installs, Spotlight lock screen ads, Start recommendations, Widgets feed, Search web suggestions, Edge promo tabs |
+| Telemetry & diagnostics | 21 | 17 | `DiagTrack` service, compatibility appraiser, CEIP uploads, feedback prompts |
+| Preinstalled apps | 19 | 0 | Clipchamp, Dev Home, Solitaire, Office Hub, Bing News/Weather, Xbox overlay |
+| OneDrive | 1 | 0 | Remove OneDrive client and prevent automatic reinstall |
+| Privacy hardening | 10 | 7 | Advertising ID, typing personalization, diagnostic tracking, location, settings sync |
+| Ad image cache & wallpaper | 1 | 1 | Purge downloaded Spotlight ad image cache |
+| **Total** | **74** | **45** | |
 
-Every action documents what it changes, what it costs, and why it exists. Browse the whole list in [docs/CATALOG.md](docs/CATALOG.md).
+Every action documents what it changes, what it touches in registry/services, and its reversibility. Browse the complete catalog in [docs/CATALOG.md](docs/CATALOG.md).
 
 ### Deliberately out of scope
 
 WinCleanKit will not do these, by design:
 
-- **Modify your `hosts` file.** Blocking Microsoft domains that way can break Windows Update, the Store, and — on corporate machines — VPN and SSO logins.
-- **Touch your personal files, wallpaper, or OneDrive data folder.**
-- **Disable Windows Update.** Security patches are not bloat.
-- **Turn off Delivery Optimization.** It is an update accelerator, not telemetry. (You can opt out of its peer-to-peer sharing separately.)
-- **Break Edge.** It removes Edge's promotional tabs; it does not remove the browser.
+- **Modify your `hosts` file.** Blocking Microsoft domains via DNS breaks Windows Update, Microsoft Store, and corporate VPN/SSO endpoints.
+- **Touch personal files, your wallpaper, or your OneDrive data folder.**
+- **Disable Windows Update.** Security patches are critical system infrastructure, not bloat.
+- **Turn off Delivery Optimization wholesale.** It accelerates local and network updates; peer-to-peer uploading can be toggled without disabling the service.
+- **Break Microsoft Edge.** It disables Edge's promotional tabs and popups; it does not excise the browser engine required by WebView2 apps.
 
 ---
 
 ## Safety and rollback
 
-Before anything is changed, WinCleanKit creates:
+Before any modification occurs, WinCleanKit generates a standalone rollback package on your Desktop:
 
-```
+```text
 Desktop\WinCleanKit-<timestamp>\
 ├── backup.json                 every original value, byte for byte
-├── Restore-WinCleanKit.ps1     one-click undo for the whole run
-└── run.log                     one line per action, including skips and failures
+├── Restore-WinCleanKit.ps1     one-click undo script for the entire run
+└── run.log                     detailed execution log (applied, skipped, failed)
 ```
+
+To roll back a previous run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\Desktop\WinCleanKit-<timestamp>\Restore-WinCleanKit.ps1"
 ```
 
-Registry values are restored exactly, services go back to their original start type, scheduled tasks are re-enabled. Uninstalled Store apps are not re-downloaded automatically (the restore script tells you which ones to reinstall). Read [docs/SAFETY.md](docs/SAFETY.md) before running it on a work machine.
+Registry keys are restored exactly to their original state, services are reset to their original startup types, and scheduled tasks are re-enabled. Uninstalled Store apps are not silently re-downloaded over the network; the restore script lists the exact packages so you can reinstall them cleanly from the Microsoft Store. Read [docs/SAFETY.md](docs/SAFETY.md) before running on production machines.
 
 ---
 
 ## Repository layout
 
-```
+```text
 WinCleanKit/
 ├── run.bat                      double-click launcher (what most users need)
 ├── src/
 │   ├── WinCleanKit.bat          interactive front-end: elevation, menus, confirmation
 │   ├── WinCleanKit.ps1          the engine + the terminal design system
-│   └── menu/menu.ps1            menu data provider (keeps batch free of JSON parsing)
+│   ├── menu/menu.ps1            menu data provider (keeps batch free of JSON parsing)
+│   └── lib/                     TUI implementation (logic, renderer, input loop)
 ├── catalog/catalog.json         all 74 actions as data
 ├── docs/                        catalog, usage, safety, limitations, linting
 ├── tests/                       eight gates incl. TUI logic and layout
@@ -266,16 +297,17 @@ colour roles, so the front-end and the engine read as one product.
   `caution`, `danger`, `muted`. Changing the palette is one line in `$script:Ink`.
 - **Width-aware alignment.** Chinese glyphs occupy two terminal columns but count
   as one character, so PowerShell's own `{0,-20}` leaves CJK tables ragged.
-  `Format-Text` measures display width, which is why the category counts line up
+  `Format-Text` measures display width, which is why category counts line up
   identically in English and Chinese.
 - **Colour is never the only signal.** Every state has a text marker (`[ok]`,
   `[dry]`, `[--]`, `[!!]`, `[XX]`), and colour degrades to plain text when output
   is redirected, piped, or `NO_COLOR` is set — so logs and CI capture stay clean.
-- **Progress for long runs.** A 74-action run prints `[ 12/74]  16%`, so it never
-  looks frozen.
+- **Progress for long runs.** A run prints `[ 12/45]  26%`, so it never looks frozen.
 - **No flashing.** The front-end repositions the cursor and redraws over the
   previous frame instead of calling `CLS` on every screen, which also keeps the
   last 25 lines as scrollback.
+
+---
 
 ## Contributing
 
@@ -305,9 +337,17 @@ Adding an action is usually a small JSON change. Please read [CONTRIBUTING.md](C
 .\tests\Test-TuiRender.ps1
 ```
 
-All eight gates run in CI. Current state: parser 37 checks, PSScriptAnalyzer
-`0 errors / 0 warnings`, docs 5 checks (229 links), catalog 31 checks, engine 23
-checks, TUI logic 55 checks, TUI layout 50 checks. See [LINTING.md](docs/LINTING.md).
+All eight gates run in CI. Current state:
+- **Test-Parse.ps1**: 59 checks (PowerShell syntax parser, UTF-8 BOM rules, single-BOM invariant, batch launcher invariants)
+- **Test-Analyzer.ps1**: CLEAN (`0 errors / 0 warnings` across PSScriptAnalyzer 1.25.0)
+- **Test-Docs.ps1**: 5 checks (231 relative links verified, all bilingual pairs cross-linked, 0 internal network addresses)
+- **New-CatalogDoc.ps1 -Check**: generated `docs/CATALOG.md` verified current
+- **Test-Catalog.ps1**: 32 checks (schema validity, safety invariants, default-set constraints)
+- **Test-Engine.ps1**: 25 checks (selection semantics, dry-run purity, bilingual output)
+- **Test-Tui.ps1**: 83 checks (TUI navigation, selection sets, render stamps, language chooser, scroll logic)
+- **Test-TuiRender.ps1**: 98 checks (scroll-safe painting contract, frame geometry, dual-modal panels, clean borders)
+
+See [LINTING.md](docs/LINTING.md).
 
 ---
 
