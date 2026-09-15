@@ -6,7 +6,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4.svg)](#环境要求)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE.svg)](#环境要求)
 [![Actions](https://img.shields.io/badge/catalog-74%20actions-4B5563.svg)](docs/CATALOG.md)
-[![Gates](https://img.shields.io/badge/gates-8%20passing-22C55E.svg)](#仓库结构)
+[![Gates](https://img.shields.io/badge/gates-9%20passing-22C55E.svg)](#仓库结构)
 
 [English](README.md) · **中文说明**  
 **文档:** [用法](docs/USAGE.zh-CN.md) ([EN](docs/USAGE.md)) · [安全](docs/SAFETY.zh-CN.md) ([EN](docs/SAFETY.md)) · [限制](docs/LIMITATIONS.zh-CN.md) ([EN](docs/LIMITATIONS.md)) · [行动目录](docs/CATALOG.md) ([中文](docs/CATALOG.zh-CN.md)) · [代码规范](docs/LINTING.md)  
@@ -142,6 +142,10 @@ WinCleanKit 反过来设计：
 > **环境要求**：Windows 10 1809+ / Windows 11 · Windows PowerShell 5.1 或 PowerShell 7+ · 修改机器级设置（`HKLM`）需要管理员权限。
 > 即使跑完本工具，Windows 11 专业版/家庭版仍会发送**必需**级诊断数据 —— 这是平台限制，不是设置能绕过的，详见[已知限制](docs/LIMITATIONS.zh-CN.md)。
 
+不想克隆仓库？每个 [release](https://github.com/ChanceFlow/WinCleanKit/releases) 还会附一个打包下载：
+只有工具本体、用户文档和许可证，不含任何测试套件、生成器或 CI 配置。本地自己打一个也只要一条命令：
+`tools\New-ReleasePackage.ps1`。
+
 喜欢用命令行？`src\WinCleanKit.ps1` 就是完整引擎，所有决定都可以通过参数传入 —— 详见[命令行](#命令行)。
 
 ### 默认勾选了什么
@@ -259,8 +263,9 @@ WinCleanKit/
 │   └── lib/                     TUI 核心实现（纯逻辑、渲染器、输入循环）
 ├── catalog/catalog.json         全部 74 条操作，以数据形式存在
 ├── docs/                        目录、用法、安全、限制、代码规范
-├── tests/                       八道门禁：含 TUI 逻辑与布局
-├── tools/                       New-CatalogDoc.ps1（生成双语行动目录）
+├── release/                     打包下载的第一页
+├── tests/                       九道门禁：含 TUI 逻辑、布局与发布包校验
+├── tools/                       New-CatalogDoc.ps1、New-ReleasePackage.ps1
 ├── .github/workflows/           CI（在 .gitea/workflows 有镜像）
 └── localization/                UI 文案
 ```
@@ -319,15 +324,16 @@ WinCleanKit/
 .\tests\Test-TuiRender.ps1
 ```
 
-八道门禁在 CI 中都会跑。当前状态：
-- **Test-Parse.ps1**: 59 项通过（PowerShell 语法解析、UTF-8 BOM 约束、单 BOM 校验、批处理启动器规范）
+九道门禁在 CI 中都会跑。当前状态：
+- **Test-Parse.ps1**: 65 项通过（PowerShell 语法解析、UTF-8 BOM 约束、单 BOM 校验、批处理启动器规范）
 - **Test-Analyzer.ps1**: CLEAN（PSScriptAnalyzer 1.25.0 下 `0 Error / 0 Warning`）
-- **Test-Docs.ps1**: 5 项全过（231 条相对链接可达、双语文档互链完备、0 处私有内网地址）
+- **Test-Docs.ps1**: 5 项全过（238 条相对链接可达、双语文档互链完备、0 处私有内网地址）
 - **New-CatalogDoc.ps1 -Check**: 生成的 `docs/CATALOG.md` 为最新状态
 - **Test-Catalog.ps1**: 32 项（模式合法性、安全约束、默认勾选集不变式）
 - **Test-Engine.ps1**: 25 项（选择语义、dry-run 纯度、双语输出一致性）
 - **Test-Tui.ps1**: 83 项（TUI 导航、选择集、重绘特征戳、语言选择器、滚动视口算法）
 - **Test-TuiRender.ps1**: 98 项（防滚动绘制契约、边框几何结构、双模态详情面板、ANSI 控制）
+- **Test-Release.ps1**: 15 项（打包下载只含产品本体、无开发文件泄漏、发布件编码正确、包内所有相对链接可达）
 
 详见[代码规范与门禁说明](docs/LINTING.md)。
 

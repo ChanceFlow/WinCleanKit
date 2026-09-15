@@ -1,4 +1,4 @@
-[English](USAGE.md) · [中文](USAGE.zh-CN.md) · **Docs:** [README](../README.md) · [Usage](USAGE.md) · [Safety](SAFETY.md) · [Limitations](LIMITATIONS.md) · [Catalog](CATALOG.md) · [Linting](LINTING.md)
+﻿[English](USAGE.md) · [中文](USAGE.zh-CN.md) · **Docs:** [README](../README.md) · [Usage](USAGE.md) · [Safety](SAFETY.md) · [Limitations](LIMITATIONS.md) · [Catalog](CATALOG.md) · [Linting](LINTING.md)
 
 # Usage
 
@@ -160,4 +160,4 @@ Disable DiagTrack service                            <- what it does
 
 ## Adding your own actions
 
-Everything is data. To add an action, edit [`catalog/catalog.json`](../catalog/catalog.json) and run `tests/Test-Catalog.ps1`. See [CONTRIBUTING.md](../CONTRIBUTING.md) for the schema and the default-selection rule.
+Everything is data. To add an action, edit [`catalog/catalog.json`](../catalog/catalog.json) and run `tests/Test-Catalog.ps1`. The schema and the default-selection rule are documented in `CONTRIBUTING.md` in the project repository.

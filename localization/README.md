@@ -31,6 +31,8 @@ Non-ASCII text depends on these, and CI enforces both:
 
 - **`.bat` — UTF-8 *without* BOM, CRLF line endings.** A BOM prints as garbage before
   `@echo off`; LF-only line endings confuse `cmd`. The file sets `chcp 65001` itself.
-- **`.ps1` — UTF-8 *with* BOM, CRLF line endings.** Windows PowerShell 5.1 decodes a
-  BOM-less script using the machine's ANSI codepage, which turns Chinese strings into
-  mojibake. This is the single most common way to break this project.
+- **`.ps1` — UTF-8 *with* BOM.** Windows PowerShell 5.1 decodes a BOM-less script using
+  the machine's ANSI codepage, which turns Chinese strings into mojibake. This is the
+  single most common way to break this project. Line endings are not enforced for
+  PowerShell files, because the interpreter accepts either; `Test-Parse.ps1` checks the
+  BOM (exactly one of them) and the `.bat` rules.

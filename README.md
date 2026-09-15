@@ -6,7 +6,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4.svg)](#requirements)
 [![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE.svg)](#requirements)
 [![Actions](https://img.shields.io/badge/catalog-74%20actions-4B5563.svg)](docs/CATALOG.md)
-[![Gates](https://img.shields.io/badge/gates-8%20passing-22C55E.svg)](#repository-layout)
+[![Gates](https://img.shields.io/badge/gates-9%20passing-22C55E.svg)](#repository-layout)
 
 **English** · [中文说明](README.zh-CN.md)  
 **Docs / 文档:** [Usage](docs/USAGE.md) ([中文](docs/USAGE.zh-CN.md)) · [Safety](docs/SAFETY.md) ([中文](docs/SAFETY.zh-CN.md)) · [Limitations](docs/LIMITATIONS.md) ([中文](docs/LIMITATIONS.zh-CN.md)) · [Catalog](docs/CATALOG.md) ([中文](docs/CATALOG.zh-CN.md)) · [Linting](docs/LINTING.md)  
@@ -149,6 +149,11 @@ rollback point to your Desktop.
 > **Requirements:** Windows 10 1809+ or Windows 11 · Windows PowerShell 5.1 or PowerShell 7+ · administrator rights for machine-level (`HKLM`) changes.
 > Windows 11 Pro/Home will still send *Required* diagnostic data even after this tool runs — that is a platform limit, not a setting. See [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
+Prefer not to clone? Every [release](https://github.com/ChanceFlow/WinCleanKit/releases) also
+ships a packaged download — the tool, its user documentation and the licence, and none of the
+test suites, generators or CI definitions. Building it locally is one command:
+`tools\New-ReleasePackage.ps1`.
+
 Prefer the command line? `src\WinCleanKit.ps1` is the full engine and accepts all decisions
 as flags — see [Command line](#command-line).
 
@@ -272,8 +277,9 @@ WinCleanKit/
 │   └── lib/                     TUI implementation (logic, renderer, input loop)
 ├── catalog/catalog.json         all 74 actions as data
 ├── docs/                        catalog, usage, safety, limitations, linting
-├── tests/                       eight gates incl. TUI logic and layout
-├── tools/                       New-CatalogDoc.ps1 (generates the bilingual catalog)
+├── release/                     front page of the packaged download
+├── tests/                       nine gates incl. TUI logic, layout and the package
+├── tools/                       New-CatalogDoc.ps1, New-ReleasePackage.ps1
 ├── .github/workflows/           CI (mirrored in .gitea/workflows)
 └── localization/                UI strings
 ```
@@ -337,15 +343,16 @@ Adding an action is usually a small JSON change. Please read [CONTRIBUTING.md](C
 .\tests\Test-TuiRender.ps1
 ```
 
-All eight gates run in CI. Current state:
-- **Test-Parse.ps1**: 59 checks (PowerShell syntax parser, UTF-8 BOM rules, single-BOM invariant, batch launcher invariants)
+All nine gates run in CI. Current state:
+- **Test-Parse.ps1**: 65 checks (PowerShell syntax parser, UTF-8 BOM rules, single-BOM invariant, batch launcher invariants)
 - **Test-Analyzer.ps1**: CLEAN (`0 errors / 0 warnings` across PSScriptAnalyzer 1.25.0)
-- **Test-Docs.ps1**: 5 checks (231 relative links verified, all bilingual pairs cross-linked, 0 internal network addresses)
+- **Test-Docs.ps1**: 5 checks (238 relative links verified, all bilingual pairs cross-linked, 0 internal network addresses)
 - **New-CatalogDoc.ps1 -Check**: generated `docs/CATALOG.md` verified current
 - **Test-Catalog.ps1**: 32 checks (schema validity, safety invariants, default-set constraints)
 - **Test-Engine.ps1**: 25 checks (selection semantics, dry-run purity, bilingual output)
 - **Test-Tui.ps1**: 83 checks (TUI navigation, selection sets, render stamps, language chooser, scroll logic)
 - **Test-TuiRender.ps1**: 98 checks (scroll-safe painting contract, frame geometry, dual-modal panels, clean borders)
+- **Test-Release.ps1**: 15 checks (the packaged download contains the product, no development file leaked in, the shipped encoding survives, and every link inside the package resolves)
 
 See [LINTING.md](docs/LINTING.md).
 

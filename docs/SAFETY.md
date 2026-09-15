@@ -1,4 +1,4 @@
-[English](SAFETY.md) · [中文](SAFETY.zh-CN.md) · **Docs:** [README](../README.md) · [Usage](USAGE.md) · [Safety](SAFETY.md) · [Limitations](LIMITATIONS.md) · [Catalog](CATALOG.md) · [Linting](LINTING.md)
+﻿[English](SAFETY.md) · [中文](SAFETY.zh-CN.md) · **Docs:** [README](../README.md) · [Usage](USAGE.md) · [Safety](SAFETY.md) · [Limitations](LIMITATIONS.md) · [Catalog](CATALOG.md) · [Linting](LINTING.md)
 
 # Safety
 
@@ -63,4 +63,4 @@ Both suites are read-only. `Test-Engine.ps1` uses only `-Plan` and `-DryRun`, an
 
 ## Reporting a safety problem
 
-If you find a path where the tool changes something it should not, or fails to restore something it recorded, please open an issue with the affected action id and the relevant part of `run.log`. See [SECURITY.md](../SECURITY.md) for anything that looks exploitable.
+If you find a path where the tool changes something it should not, or fails to restore something it recorded, please open an issue with the affected action id and the relevant part of `run.log`. For anything that looks exploitable, use the security policy in the project repository (`SECURITY.md`).

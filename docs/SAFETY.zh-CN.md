@@ -1,4 +1,4 @@
-[中文](SAFETY.zh-CN.md) · [English](SAFETY.md) · **文档：** [中文说明](../README.zh-CN.md) · [用法](USAGE.zh-CN.md) · [安全](SAFETY.zh-CN.md) · [限制](LIMITATIONS.zh-CN.md) · [行动目录](CATALOG.md) · [代码规范](LINTING.md)
+﻿[中文](SAFETY.zh-CN.md) · [English](SAFETY.md) · **文档：** [中文说明](../README.zh-CN.md) · [用法](USAGE.zh-CN.md) · [安全](SAFETY.zh-CN.md) · [限制](LIMITATIONS.zh-CN.md) · [行动目录](CATALOG.md) · [代码规范](LINTING.md)
 
 # 安全说明
 
@@ -63,4 +63,4 @@ WinCleanKit 会修改操作系统设置。这里直说它做什么、拒绝做�
 
 ## 报告安全问题
 
-如果你发现某条路径改动了它不该改的东西，或没能还原它记录过的东西，请开 issue 并附上相关动作 id 与 `run.log` 的对应片段。若看起来可被利用，请见 [SECURITY.md](../SECURITY.md)。
+如果你发现某条路径改动了它不该改的东西，或没能还原它记录过的东西，请开 issue 并附上相关动作 id 与 `run.log` 的对应片段。若看起来可被利用，请按项目仓库里的安全政策（`SECURITY.md`）上报。

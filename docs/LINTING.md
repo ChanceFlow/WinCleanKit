@@ -1,15 +1,20 @@
-# Linting and syntax gates
+﻿# Linting and syntax gates
 
-Three gates run in CI and can all be run locally. None of them change anything.
+Nine gates run in CI and can all be run locally. None of them change anything.
 
 ```powershell
-.\tests\Test-Parse.ps1      # syntax: the PowerShell parser, plus file-encoding rules
-.\tests\Test-Analyzer.ps1   # style and correctness: PSScriptAnalyzer
-.\tests\Test-Catalog.ps1    # data integrity and safety invariants
-.\tests\Test-Engine.ps1     # behaviour: selection semantics, dry-run purity
+.\tests\Test-Parse.ps1       # syntax: the PowerShell parser, plus file-encoding rules
+.\tests\Test-Analyzer.ps1    # style and correctness: PSScriptAnalyzer
+.\tests\Test-Docs.ps1        # links resolve, bilingual pairs cross-link, no internal addresses
+.\tools\New-CatalogDoc.ps1 -Check   # the generated catalog is current
+.\tests\Test-Catalog.ps1     # data integrity and safety invariants
+.\tests\Test-Engine.ps1      # behaviour: selection semantics, dry-run purity
+.\tests\Test-Tui.ps1         # the TUI's logic: navigation, selection, what forces a repaint
+.\tests\Test-TuiRender.ps1   # the TUI's layout: frame geometry and the painting contract
+.\tests\Test-Release.ps1     # the packaged download contains the product and nothing else
 ```
 
-`Test-Parse.ps1` needs nothing installed. `Test-Analyzer.ps1` needs PSScriptAnalyzer:
+Only `Test-Analyzer.ps1` needs anything installed:
 
 ```powershell
 Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
@@ -105,7 +110,7 @@ painter wrote a line feed after the last row, so the console scrolled and the wh
 interface sat one row too high — and re-scrolled on every repaint. The frames were
 verified; the painting was not.
 
-[`tools/Test-TuiScroll.ps1`](../tools/Test-TuiScroll.ps1) closes that gap. It has to
+`tools/Test-TuiScroll.ps1` (in the repository, not in the download) closes that gap. It has to
 be run by hand in a real console window, but it does not ask you to judge anything
 by eye:
 

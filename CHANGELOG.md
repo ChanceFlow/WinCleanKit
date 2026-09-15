@@ -23,6 +23,16 @@ part worth reading.
   All 74 actions across all 6 categories in `catalog/catalog.json` and `docs/CATALOG.md`
   were expanded with thorough explanations (behavior, debloat rationale, trade-offs/side
   effects, and reversibility), replacing previous terse one-liners.
+- **A release package that contains the product, not the repository.**
+  `tools/New-ReleasePackage.ps1` builds `dist/WinCleanKit-<version>.zip` from two closed
+  lists: the files someone needs in order to run the tool, and the development files they
+  do not. A file matching neither stops the build, so nothing new can quietly ship to
+  users or quietly fail to. The front page of the download is `release/README.md` -- a
+  page written for someone who just wants to run it, with no badges, no CI status and no
+  contributing section -- and `tests/Test-Release.ps1` (15 checks) inspects the archive
+  that comes out: every file the product needs is in it, no test or CI file leaked in,
+  the shipped `.bat`/`.ps1` still carry the encoding that makes them work, no entry is
+  empty, and every relative link inside the package resolves.
 - **A language chooser as the first screen.** The full-screen interface used to open
   in English unconditionally, which is a poor welcome for anyone who cannot read it.
   It now opens on a bilingual chooser — the one screen that cannot assume a language,
@@ -259,7 +269,7 @@ part worth reading.
   toggle, category selection, per-item selection, preview, apply-cancel,
   apply-confirm and restore all exit 0 with no cmd error text, in
   both call styles (`run.bat` and the inner `WinCleanKit.bat`, relative and
-  absolute). All eight gates pass.
+  absolute). All nine gates pass.
 - `tests/Test-Parse.ps1` gained five checks that pin the batch launcher rules:
   `chcp` must keep stdin, no script path may be expanded after the working
   directory moves, every prompt must go through `:ask`, and `run.bat` must capture

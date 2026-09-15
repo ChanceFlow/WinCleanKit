@@ -1,4 +1,4 @@
-[中文](USAGE.zh-CN.md) · [English](USAGE.md) · **文档：** [中文说明](../README.zh-CN.md) · [用法](USAGE.zh-CN.md) · [安全](SAFETY.zh-CN.md) · [限制](LIMITATIONS.zh-CN.md) · [行动目录](CATALOG.md) · [代码规范](LINTING.md)
+﻿[中文](USAGE.zh-CN.md) · [English](USAGE.md) · **文档：** [中文说明](../README.zh-CN.md) · [用法](USAGE.zh-CN.md) · [安全](SAFETY.zh-CN.md) · [限制](LIMITATIONS.zh-CN.md) · [行动目录](CATALOG.md) · [代码规范](LINTING.md)
 
 # 用法
 
@@ -154,4 +154,4 @@ Disable DiagTrack service                            <- 它做什么
 
 ## 添加你自己的动作
 
-一切都是数据。要新增一个动作，编辑 [`catalog/catalog.json`](../catalog/catalog.json)，然后运行 `tests/Test-Catalog.ps1`。schema 与默认集规则见 [CONTRIBUTING.md](../CONTRIBUTING.md)。
+一切都是数据。要新增一个动作，编辑 [`catalog/catalog.json`](../catalog/catalog.json)，然后运行 `tests/Test-Catalog.ps1`。schema 与默认集规则见项目仓库里的 `CONTRIBUTING.md`。

@@ -71,3 +71,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./tests/Test-TuiRender.ps1
+
+      - name: Release package contents
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tests/Test-Release.ps1
