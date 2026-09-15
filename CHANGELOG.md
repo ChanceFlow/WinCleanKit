@@ -51,10 +51,11 @@ part worth reading.
     fails, or output is redirected, the TUI declines and the plain path is used.
 - **`--simple`** (and `-Tui:$false`) keeps the previous numbered menu, for
   automation, screen readers, and terminals without ANSI support.
-- **Two new test gates.** `tests/Test-Tui.ps1` (57 checks) covers the navigation,
-  selection and scroll-window logic; `tests/Test-TuiRender.ps1`
-  (54 checks) covers the frame geometry, pane borders, checkbox rendering, the help
-  screen, and that rendering never mutates state.
+- **Two new test gates.** `tests/Test-Tui.ps1` (83 checks) covers the navigation,
+  the selection state and its render stamp, and the scroll-window logic;
+  `tests/Test-TuiRender.ps1` (98 checks) covers the frame geometry, the painting
+  contract, pane borders, checkbox rendering, the help screen, and that rendering
+  never mutates state.
 - `src/lib/Tui.Logic.ps1`, `src/lib/Tui.Render.ps1`, `src/lib/Tui.Input.ps1`.
 - **A terminal design system.** The engine now owns one palette and one status
   vocabulary instead of scattering colours and markers through the output:
