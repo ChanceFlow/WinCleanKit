@@ -6,11 +6,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-15
+
+First public release: 74 actions in 6 categories, a full-screen bilingual TUI, and a
+rollback journal written before the first change is made. Nothing before this tag was
+ever published, so the entries below also record the decisions taken while the project
+was private, in the order they were taken. They are kept because the reasoning is the
+part worth reading.
+
 ### Added
 - **Dual-modal detail panel and comprehensive catalog descriptions.** The detail
-  panel adapts to the active pane: selecting a category on the left presents the
-  category's scope, overview, and selection count, while selecting an action on the
-  right presents that action's rationale, default membership, and technical target.
+  panel adapts to the active pane: selecting a category presents its scope, overview,
+  and selection count, while selecting an action presents that action's rationale,
+  default membership, and technical target -- both in the panel under the categories,
+  never in the action column itself.
   All 74 actions across all 6 categories in `catalog/catalog.json` and `docs/CATALOG.md`
   were expanded with thorough explanations (behavior, debloat rationale, trade-offs/side
   effects, and reversibility), replacing previous terse one-liners.
@@ -276,36 +285,12 @@ All notable changes to this project are documented here. The format follows
   `[CmdletBinding(SupportsShouldProcess)]` is not valid on a function in Windows
   PowerShell 5.1 at all. `Test-Parse.ps1` now catches both classes of mistake.
 
-## [0.1.0] - 2026-09-13
-
-First public release.
-
-### Added
-
-- **Interactive `.bat` front-end** with elevation handling, three presets, per-category
-  and per-item selection, a mandatory preview step, and a restore menu.
-- **Data-driven engine** (`src/WinCleanKit.ps1`): catalog-driven resolution, preview,
-  application and journalling. Usable standalone for scripted and unattended runs.
-- **74 actions in 6 categories**: Windows ads and suggestions, telemetry and diagnostic
-  data, preinstalled apps, OneDrive, privacy hardening, ad image cache.
-- **Three presets** with an enforced containment chain, `conservative ⊆ balanced ⊆ aggressive`
-  (45 / 60 / 74 actions).
-- **Full rollback**: every run writes `backup.json`, `run.log` and a generated
-  `Restore-WinCleanKit.ps1` to a timestamped folder on the Desktop.
-- **Bilingual UI** (English / Chinese) with both languages carried inline in the catalog.
-- **Command-line interface**: `-Plan`, `-Apply`, `-DryRun`, `-Only`, `-Skip`, `-FromFile`,
-  `-Preset`, `-Language`, `-NoPrompt`, `-EmitJson`, `-ListCatalog`, `-ListRestores`, `-Restore`.
-- **Test suites**: `tests/Test-Catalog.ps1` (static integrity, safety invariants, encoding)
-  and `tests/Test-Engine.ps1` (selection semantics, dry-run purity, bilingual output).
-- **Safety invariants enforced by tests**: no `hosts` modification, no disabling of
-  Windows Update or core diagnostic services, no touching the wallpaper or its transcode copy.
-
 ### Design decisions worth recording
 
 - **`-Only` is authoritative rather than additive.** An additive `-Only` is the obvious
   implementation, but it silently re-adds anything the user deselected in the UI. The
   regression test for this is `deselection survives the round trip`.
-- **`New-Journal` does not create its directory.** A dry run must leave no trace on disk.
+- **`Initialize-Journal` does not create its directory.** A dry run must leave no trace on disk.
   Directory creation moved into `Save-Journal`, which a dry run never calls.
 - **Wildcard matching requires a wildcard character.** `$Id -like $pattern` treats `.` as a
   wildcard, so an unknown literal id such as `no.such.id` matched every action. Patterns are
