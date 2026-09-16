@@ -78,8 +78,10 @@ foreach ($c in $cat.categories) {
         Add-Line ''
         $isDefault = if ($a.default) { 'yes / 是' } else { 'no / 否' }
         Add-Line ('- **Target / 类型:** `{0}`  ·  **Default / 默认:** {1}' -f $a.target, $isDefault)
-        Add-Line ('- **Why / 为什么:** {0}' -f $a.why)
-        Add-Line ('- **代价 / Cost:** {0}' -f $a.why_zh)
+        # Both lines are the same field in two languages, so both say so: the old
+        # "代价 / Cost" label was left over from a schema that had a separate cost.
+        Add-Line ('- **Why / 为什么 [EN]:** {0}' -f $a.why)
+        Add-Line ('- **Why / 为什么 [中文]:** {0}' -f $a.why_zh)
 
         switch ($a.target) {
             'registry' { Add-Line ('- **Sets:** `{0}\{1}\{2}` = `{3}` ({4})' -f $a.hive, $a.key, $a.name, $a.value, $a.type) }
@@ -132,7 +134,7 @@ $zh = New-Object System.Collections.Generic.List[string]
 [void]$zh.Add('')
 [void]$zh.Add(('本项目的 {0} 条操作分布在 {1} 个分类中，完整清单见 **[CATALOG.md](CATALOG.md)**。' -f $cat.actions.Count, $cat.categories.Count))
 [void]$zh.Add('')
-[void]$zh.Add('那份目录**本身就是双语的**：每条操作都同时给出中文与英文的标题、说明与代价，以及是否为默认勾选，因此不需要、也不应该再维护第二份副本 —— 两份文档必然会逐渐不一致。')
+[void]$zh.Add('那份目录**本身就是双语的**：每条操作都同时给出中英文的标题与说明，以及是否默认勾选，因此不需要、也不应该再维护第二份副本 —— 两份文档必然会逐渐不一致。')
 [void]$zh.Add('')
 [void]$zh.Add('如果你在找某个具体动作，直接看 [CATALOG.md](CATALOG.md)；想按分类快速浏览，[README.zh-CN.md](../README.zh-CN.md) 里有汇总表。')
 [void]$zh.Add('')

@@ -117,6 +117,19 @@ Write-Host '--- safety invariants ---' -ForegroundColor Cyan
 function Get-OptProp($Obj, [string]$Name) {
     if ($Obj.PSObject.Properties.Name -contains $Name) { [string]$Obj.$Name } else { '' }
 }
+# Anyone who ticks nothing and presses apply should get "ads closed, telemetry off"
+# and no surprises. The strongest statement of that we can make mechanically: no
+# action that is on by default may describe a trade-off. Every description that
+# mentions one -- the lock-screen wallpaper gone static, error reporting gone, the
+# Settings home page folded away, location off, apps uninstalled -- belongs to an
+# opt-in, which is what the default set exists to keep out.
+# The keywords are a tripwire, not a parser: a new default whose text says
+# "trade-off" has to be reworded or moved, and both are the right outcome.
+$costRe = 'trade-?off|取舍|代价|will lose|no longer|cannot|breaks|breaking'
+$costlyDefault = @($cat.actions | Where-Object {
+    $_.default -and (((Get-OptProp $_ 'why') -match $costRe) -or ((Get-OptProp $_ 'why_zh') -match $costRe))
+})
+Check 'every default states no trade-off' ($costlyDefault.Count -eq 0) ("found: " + (($costlyDefault | ForEach-Object { $_.id }) -join ', '))
 $hostsRefs = @()
 foreach ($a in $cat.actions) {
     $blob = ''
