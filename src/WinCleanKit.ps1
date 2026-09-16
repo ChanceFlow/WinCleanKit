@@ -72,6 +72,10 @@ param(
     [string]   $Restore,
     [switch]   $Version,
     [switch]   $Tui,
+    # Open the windowed frontend instead of the console one. It drives the same
+    # state machine and runs the engine itself as a child process, so the caller
+    # only has to get out of the way afterwards.
+    [switch]   $Gui,
     [switch]   $NoTui,
     # 'ask' opens the TUI on its language chooser, which is the only way to offer
     # the choice without already knowing which language the reader can read.
@@ -727,6 +731,22 @@ function Write-CatalogJson {
 # Interactive mode
 # --------------------------------------------------------------------------
 
+function Open-GuiSession {
+    <#
+      Load the windowed frontend and run one session.
+
+      Returns $null: the window runs the engine itself (a child process with an
+      authoritative -FromFile list), so there is no plan left to hand back. Whether
+      a run happened is reported through $script:UiApplied.
+    #>
+    [CmdletBinding()]
+    param()
+
+    $result = Show-GuiSession -Catalog (Get-Catalog) -Engine $PSCommandPath `
+                        -Language $TuiLanguage -Version $script:EngineVersion -DryRun:$DryRun
+    return $result
+}
+
 function Open-InteractiveSession {
     <#
       Load the TUI libraries and run one interactive session.
@@ -753,11 +773,19 @@ function Open-InteractiveSession {
 # inside a function would bind every definition to that function's scope, which is
 # why the load cannot live in Open-InteractiveSession.
 # --------------------------------------------------------------------------
-if ($Tui -and -not $NoTui) {
-    foreach ($f in 'Tui.Logic.ps1', 'Tui.Render.ps1', 'Tui.Input.ps1') {
+if (($Tui -or $Gui) -and -not $NoTui) {
+    # Both frontends share the state layer; only their drawing differs.
+    $components = @('Ui.Logic.ps1')
+    if (-not $Gui) { $components += @('Tui.Render.ps1', 'Tui.Input.ps1') }
+    foreach ($f in $components) {
         $comp = Join-Path $PSScriptRoot (Join-Path 'lib' $f)
-        if (-not (Test-Path $comp)) { throw "TUI component missing: $comp" }
+        if (-not (Test-Path $comp)) { throw "UI component missing: $comp" }
         . $comp
+    }
+    if ($Gui) {
+        $guiComp = Join-Path $script:Root 'src/gui/WinCleanKit.gui.ps1'
+        if (-not (Test-Path $guiComp)) { throw "GUI component missing: $guiComp" }
+        . $guiComp
     }
 }
 
@@ -778,6 +806,22 @@ try {
     # Interactive mode. Runs before any selection is resolved, and hands its
     # result to the same resolution/execution path as every other mode rather than
     # duplicating preview, apply or backup logic.
+    if ($Gui -and -not $NoTui) {
+        # The window owns the whole interaction. When it applied something, the run
+        # has already happened -- in a child process, with the same journal and the
+        # same code path -- so this process only reports how it ended.
+        $null = Open-GuiSession
+        if ($script:UiApplied) {
+            if ($TuiExitCode) { exit 0 }
+            return
+        }
+        if ($TuiExitCode) {
+            exit $(if ($script:UiOutcome) { $script:UiOutcome } else { 0 })
+        }
+        Write-Info 'Nothing selected; no changes were made.'
+        return
+    }
+
     if ($Tui -and -not $NoTui) {
         $tuiPlan = Open-InteractiveSession
         if (-not $tuiPlan) {

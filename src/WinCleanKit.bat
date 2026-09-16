@@ -82,7 +82,9 @@ rem so anything not forwarded on its command line is lost. A user who asked for 
 rem accessible menu should not be dropped into the full-screen one, and a user who
 rem asked for a language should not be asked for it again.
 rem
-rem   --simple / --no-tui   the numbered menu instead of the full-screen interface
+rem   --gui                 the windowed interface (what run.bat asks for)
+rem   --tui                 force the full-screen console interface
+rem   --simple / --no-tui   the numbered menu instead of either interface
 rem   --lang zh | en        skip the language chooser
 rem   --zh / --en           the same thing, spelled short
 rem   --lang=zh | --lang=en also accepted
@@ -90,12 +92,16 @@ rem
 rem With no language switch the TUI opens on its language chooser, which is the
 rem only place the language can be picked without knowing how to read it.
 set "WCK_SIMPLE="
+set "WCK_GUI="
+set "WCK_TUI="
 set "WCK_TUILANG=ask"
 set "WCK_LANGSET="
 set "WCK_LANGNEXT="
 for %%A in (%*) do (
     if /i "%%A"=="--simple" set "WCK_SIMPLE=1"
     if /i "%%A"=="--no-tui" set "WCK_SIMPLE=1"
+    if /i "%%A"=="--gui" set "WCK_GUI=1"
+    if /i "%%A"=="--tui" set "WCK_TUI=1"
     if defined WCK_LANGNEXT (
         if /i "%%A"=="zh" set "WCK_LANGSET=zh"
         if /i "%%A"=="en" set "WCK_LANGSET=en"
@@ -129,6 +135,8 @@ if errorlevel 1 (
     )
     set "WCK_ELEVARGS=--elevated --lang %WCK_TUILANG%"
     if defined WCK_SIMPLE set "WCK_ELEVARGS=--elevated --simple --lang %WCK_TUILANG%"
+    if defined WCK_GUI set "WCK_ELEVARGS=--elevated --gui --lang %WCK_TUILANG%"
+    if defined WCK_TUI set "WCK_ELEVARGS=--elevated --tui --lang %WCK_TUILANG%"
     powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%WCK_BATSELF%' -Verb RunAs -ArgumentList '!WCK_ELEVARGS!' -ErrorAction Stop" >nul 2>&1
     if errorlevel 1 (
         echo   [X] Could not elevate. Nothing was changed.
@@ -180,7 +188,23 @@ rem  interface. Pass --simple (or --no-tui) for the numbered menu further down,
 rem  which suits automation, screen readers, and consoles without ANSI support.
 rem ===========================================================================
 rem  WCK_SIMPLE was already resolved above, before elevation.
+rem
+rem  Three interfaces, in the order they degrade: the window (--gui), the
+rem  full-screen console UI, and the numbered menu. Each reports whether it could
+rem  run at all, so a machine with no desktop -- an SSH session, a scheduled task
+rem  in session 0 -- drops to the next instead of failing.
 if not defined WCK_SIMPLE (
+    if defined WCK_GUI if not defined WCK_TUI (
+        "%WCK_PS%" -NoProfile -ExecutionPolicy Bypass -File "%WCK_ENGINE%" -Gui -TuiExitCode -TuiLanguage "%WCK_TUILANG%"
+        set "WCK_RC=!ERRORLEVEL!"
+        if "!WCK_RC!"=="0" (
+            endlocal
+            exit /b 0
+        )
+        echo.
+        echo   [i] No desktop for the window, so using the full-screen console UI.
+        timeout /t 2 >nul 2>&1
+    )
     "%WCK_PS%" -NoProfile -ExecutionPolicy Bypass -File "%WCK_ENGINE%" -Tui -TuiExitCode -TuiLanguage "%WCK_TUILANG%"
     set "WCK_RC=!ERRORLEVEL!"
     if "!WCK_RC!"=="0" (

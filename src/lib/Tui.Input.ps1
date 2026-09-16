@@ -3,7 +3,7 @@
     WinCleanKit TUI - keyboard loop and terminal lifecycle.
 
 .DESCRIPTION
-    The thin, untestable part. Everything decidable lives in Tui.Logic.ps1; this
+    The thin, untestable part. Everything decidable lives in Ui.Logic.ps1; this
     file only:
 
       * prepares the terminal (enable VT processing, enter the alternate screen)
@@ -24,7 +24,7 @@
     bypasses it entirely and uses the non-interactive path.
 
 .NOTES
-    Part of WinCleanKit. Requires Tui.Logic.ps1 and Tui.Render.ps1 loaded first.
+    Part of WinCleanKit. Requires Ui.Logic.ps1 and Tui.Render.ps1 loaded first.
 #>
 
 Set-StrictMode -Version 2.0

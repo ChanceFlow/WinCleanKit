@@ -13,7 +13,7 @@
 **文档:** [用法](docs/USAGE.zh-CN.md) ([EN](docs/USAGE.md)) · [安全](docs/SAFETY.zh-CN.md) ([EN](docs/SAFETY.md)) · [限制](docs/LIMITATIONS.zh-CN.md) ([EN](docs/LIMITATIONS.md)) · [行动目录](docs/CATALOG.md) ([中文](docs/CATALOG.zh-CN.md)) · [代码规范](docs/LINTING.md)  
 **项目:** [参与贡献](CONTRIBUTING.zh-CN.md) ([EN](CONTRIBUTING.md)) · [安全政策](SECURITY.zh-CN.md) ([EN](SECURITY.md)) · [行为准则](CODE_OF_CONDUCT.zh-CN.md) ([EN](CODE_OF_CONDUCT.md)) · [更新日志](CHANGELOG.md) · [许可证](LICENSE)
 
-![WinCleanKit 的界面：左边是分类，右边是 74 条操作，左下角用大白话解释当前高亮的那一条](assets/tui-chinese.png)
+![WinCleanKit 的窗口：左边是分类与勾选进度，右边是 74 条操作，左下角用大白话解释当前高亮的那一条](assets/gui-chinese.png)
 
 开始菜单里的广告、「为你推荐」里从没装过的应用、锁屏上那张其实在推销的图片、关不掉的
 小组件资讯流、搜出来全是必应和 MSN 的搜索框 —— Windows 11 默认就把这些全开着，而关掉它们
@@ -21,7 +21,8 @@
 
 WinCleanKit 帮你一次关掉，**但只关你勾了的那部分**：每一条改动先用大白话告诉你它做什么，
 你没点确认之前什么都不动，动手之前先在你桌面写好还原点。它就是一个文件夹加一个 `run.bat`：
-不用安装、不用账号、不留后台服务、自己不收集任何数据。
+不用安装、不用账号、不留后台服务、自己不收集任何数据。双击打开的是一个正常的 Windows 窗口；
+如果这台机器开不了窗口，会自动退到全屏控制台界面，再退到纯文本菜单。
 
 - **你说了算。** 45 条最安全的默认勾好，剩下 29 条一个空格就能选上。你没选的不会执行，关掉的也不会被偷偷加回来。
 - **先看见再动手。** 74 条操作，每条都写明改什么、为什么、触及哪些注册表或服务，然后再由你决定。
@@ -34,9 +35,9 @@ WinCleanKit 帮你一次关掉，**但只关你勾了的那部分**：每一条�
 ## 下载并运行
 
 1. **[下载最新版本](https://github.com/ChanceFlow/WinCleanKit/releases/latest)**，把 `WinCleanKit-<版本>.zip` 解压到任意位置 —— 桌面就行。
-2. 双击 **`run.bat`**。
+2. 双击 **`run.bat`**，会打开一个窗口。
 3. 在 Windows 弹窗里点「是」。改机器级设置需要管理员权限。
-4. 选择界面语言，看一遍清单，勾选你要的，按 **`x`** 执行。
+4. 选择界面语言，看一遍清单，勾选你要的，按 **「执行」**。
 
 在你确认计划之前，系统里不会写入任何东西。
 
@@ -47,11 +48,15 @@ WinCleanKit 帮你一次关掉，**但只关你勾了的那部分**：每一条�
 <details>
 <summary><b>其他启动方式，以及怎么校验下载</b></summary>
 
-**用纯文本菜单代替全屏界面** —— 适合老终端、屏幕阅读器，或者你就是喜欢菜单：
+**两个控制台界面** —— 适合没有桌面的机器、老终端、屏幕阅读器，或者你就是喜欢它们：
 
 ```bat
-run.bat --simple
+run.bat --tui       # 全屏控制台界面
+run.bat --simple    # 编号菜单：自动化、屏幕阅读器、不支持 ANSI 的终端
 ```
+
+**从窗口里试运行：** `run.bat --gui --dry-run` 会把整个计划走一遍但什么都不改 ——
+这也是测试时验证「执行」按钮的办法。
 
 **跳过语言选择：** `run.bat --zh` 或 `run.bat --en`。
 
@@ -78,10 +83,17 @@ Get-FileHash .\WinCleanKit-0.1.0.zip -Algorithm SHA256
 
 ## 界面长什么样
 
-![同一个界面的英文版](assets/tui-english.png)
+![同一个窗口的英文版](assets/gui-english.png)
 
-整个界面纯键盘操作，所有按键都写在窗口最后一行 —— 按 `?` 看完整说明。左列是分类和各自
-的勾选进度，右列是具体条目，左下角解释当前高亮项。不需要鼠标，也不需要先读说明书。
+左列是分类和各自的勾选进度，右列是具体条目，左下角用你选的语言解释当前高亮项。
+鼠标和键盘都能用：`Ctrl+A` 勾选整个分类、`Ctrl+N` 取消、`Ctrl+L` 切换语言、`F5` 预览计划、`F9` 执行。
+
+控制台界面依然保留，而且依然是兜底方案：
+
+![全屏控制台界面：同样的分类、条目与说明，用字符画出来](assets/tui-chinese.png)
+
+纯键盘操作，所有按键都写在最后一行，按 `?` 看完整说明。没有桌面可开窗口时（SSH 会话、
+计划任务）跑的就是它；不想碰鼠标的人也可以一直用它。
 
 <details>
 <summary><b>按键说明</b></summary>
@@ -247,18 +259,19 @@ Get-FileHash .\WinCleanKit-0.1.0.zip -Algorithm SHA256
 WinCleanKit/
 ├── run.bat                      双击入口
 ├── src/
-│   ├── WinCleanKit.bat          提权、菜单、确认
+│   ├── WinCleanKit.bat          提权、界面选择、确认
 │   ├── WinCleanKit.ps1          引擎 + 终端设计系统
-│   ├── lib/                     全屏界面：逻辑、渲染器、按键循环
+│   ├── lib/                     共享的界面状态机 + 控制台渲染器
+│   ├── gui/                     窗口界面（WinForms）
 │   └── menu/menu.ps1            菜单数据提供者
 ├── catalog/catalog.json         全部 74 条操作，以数据形式存在
 ├── docs/                        用法、安全、限制、生成的行动目录
 ├── release/                     打包下载的第一页
-├── tests/                       九道门禁
+├── tests/                       十道门禁
 └── tools/                       New-CatalogDoc.ps1、New-ReleasePackage.ps1
 ```
 
-九道门禁在 CI 中每次推送都会跑，Windows 与 Linux 各一遍：
+十道门禁在 CI 中每次推送都会跑，Windows 与 Linux 各一遍：
 
 | 门禁 | 回答什么问题 |
 |---|---|
@@ -271,6 +284,7 @@ WinCleanKit/
 | `tests/Test-Tui.ps1` | 界面逻辑是否正常？每个状态变化是否都会触发重绘？ |
 | `tests/Test-TuiRender.ps1` | 边框几何与绘制契约是否完好？ |
 | `tests/Test-Release.ps1` | 打包下载是否只含产品本体？ |
+| `tests/Test-Gui.ps1` | 窗口说的和控制台说的是不是同一件事？没有桌面时窗口还能不能构建出来？ |
 
 `tools/New-ReleasePackage.ps1` 按两份封闭清单生成 `dist/WinCleanKit-<版本>.zip`，
 **清单都没匹配上的文件会直接让构建失败** —— 这样新增文件既不会悄悄发给用户，也不会悄悄漏发。

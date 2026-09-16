@@ -140,6 +140,33 @@ bidirectional linking, switcher placement, and the absence of private addresses.
   file is in neither the include nor the exclude list, so nothing new can quietly ship to users
   or quietly fail to.
 
+## The two interactive frontends
+
+`src/lib/Ui.Logic.ps1` is the state machine: navigation, selection, plan assembly, localisation,
+and the projections a window needs. It touches no screen API, and both frontends are thin glue
+around it — `src/lib/Tui.Render.ps1` + `Tui.Input.ps1` draw it as characters, `src/gui/WinCleanKit.gui.ps1`
+draws it as controls. Adding a key or a button means calling the same `Switch-*` / `Move-*`
+function, never re-deciding anything in the UI layer.
+
+The window runs the engine as a **child process** with an authoritative `-FromFile` id list,
+inside a background runspace whose output a UI timer drains onto the progress bar. That is the
+same engine invocation the console interface already makes for a preview; the process boundary
+is the only difference, and it is what keeps the window responsive for 74 actions.
+
+Two traps worth knowing before you touch that file:
+
+- **A handler runs in its own scope.** Shared state lives in `$script:GuiApp`; a local assignment
+  inside an event handler is gone by the next click. Its name avoids every parameter of
+  `WinCleanKit.ps1`, because the file is dot-sourced into that script's scope and assigning to a
+  variable the engine declared as `[switch]` throws at runtime. `Test-Gui.ps1` checks that.
+- **Event arguments are in `$args`, not `$_`.** `$_` is not the event object for an `Add_*`
+  handler, and reading `$_.KeyCode` fails at the moment a user presses a key.
+
+`tests/Test-Gui.ps1` covers the projections, the parity between the two frontends, the form
+construction (which works without a desktop) and the checkbox path. What it cannot cover is how
+the window looks and whether a real mouse click behaves; that is verified by hand in a real
+session, the same way the console key loop is.
+
 ## The terminal design system
 
 The console output is not ad-hoc `Write-Host` calls. `src/WinCleanKit.ps1` owns one palette and

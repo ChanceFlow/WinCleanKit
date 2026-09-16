@@ -59,7 +59,7 @@ param(
 $ErrorActionPreference = 'Continue'
 
 $root = Split-Path -Parent $PSScriptRoot
-. (Join-Path $root 'src/lib/Tui.Logic.ps1')
+. (Join-Path $root 'src/lib/Ui.Logic.ps1')
 . (Join-Path $root 'src/lib/Tui.Render.ps1')
 . (Join-Path $root 'src/lib/Tui.Input.ps1')
 

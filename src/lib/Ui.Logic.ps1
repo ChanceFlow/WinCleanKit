@@ -1,19 +1,23 @@
 ﻿<#
 .SYNOPSIS
-    WinCleanKit TUI - pure logic layer.
+    WinCleanKit UI - pure logic layer, shared by both frontends.
 
 .DESCRIPTION
-    Everything about the interactive UI that can be decided without a terminal
-    lives here, as pure functions over a plain hashtable:
+    Everything about the interactive UI that can be decided without a screen lives
+    here, as pure functions over a plain hashtable. The console TUI
+    (Tui.Render.ps1 + Tui.Input.ps1) and the WinForms frontend (gui/) both drive
+    this same state; only their drawing differs:
 
       * navigation   (move the cursor, change mode, switch pane)
       * selection    (toggle an action, a category, or the whole catalog)
       * layout math  (scroll windows, truncation, progress)
+      * projection   (Get-Ui* : the same facts as control contents, for the GUI)
 
     No console API is touched in this file. That is deliberate: it is the reason
-    the behaviour can be tested at all. The keyboard loop in Tui.Input.ps1 is
-    thin glue around these functions, and tests/Test-Tui.ps1 exercises the logic
-    without needing a terminal.
+    the behaviour can be tested at all. The keyboard loop in Tui.Input.ps1 and the
+    event wiring in gui/WinCleanKit.gui.ps1 are thin glue around these functions,
+    and tests/Test-Tui.ps1 + tests/Test-Gui.ps1 exercise the logic without needing
+    a terminal or a desktop.
 
     State shape (a plain hashtable, so tests can construct one by hand):
 
@@ -33,6 +37,47 @@
 #>
 
 Set-StrictMode -Version 2.0
+
+# --------------------------------------------------------------------------
+# Text helpers shared by every frontend
+#
+# These two were in the console renderer until the GUI arrived. Both are pure
+# string work over catalog objects, and both frontends need exactly the same
+# wording, so they live here rather than being copied.
+# --------------------------------------------------------------------------
+
+function Get-TuiText {
+    <#
+      Localise a catalog object, preferring the Chinese field when asked for it.
+    #>
+    [CmdletBinding()]
+    param($Object, [string]$Base, [string]$Language)
+    if ($Language -eq 'zh') {
+        $alt = "${Base}_zh"
+        if ($Object.PSObject.Properties.Name -contains $alt -and $Object.$alt) { return $Object.$alt }
+    }
+    return $Object.$Base
+}
+
+function Get-TuiTargetLine {
+    <#
+      One line describing what an action actually does, so the detail pane answers
+      "what will this touch?" without the user opening the catalog.
+    #>
+    [CmdletBinding()]
+    param($Action)
+    switch ($Action.target) {
+        'registry'   { return ("{0}\{1}\{2} = {3}" -f $Action.hive, $Action.key, $Action.name, $Action.value) }
+        'service'    { return ("service {0} -> {1}" -f $Action.name, $Action.startType) }
+        'task'       { return ("task {0}{1}" -f $Action.path, $Action.name) }
+        'appx'       { return ("uninstall {0} + revoke provisioning" -f $Action.name) }
+        'path-clean' { return ("delete cache: " + (($Action.paths | ForEach-Object { Split-Path $_ -Leaf }) -join ', ')) }
+        'onedrive'   { return 'remove OneDrive client, block reinstall (data folder untouched)' }
+        default      { return $Action.target }
+    }
+}
+
+
 
 function Select-Default {
     <#
@@ -413,4 +458,189 @@ function Get-TuiScrollTop {
     param($State, [int]$Height)
     $items = Get-TuiGroupAction $State
     return (Get-TuiWindow -Total $items.Count -Height $Height -Cursor $State.DetailIndex -ScrollTop $State.ScrollTop)
+}
+
+# --------------------------------------------------------------------------
+# View model for a windowed frontend
+#
+# The console renderer turns state into characters; a windowed frontend turns the
+# same state into control contents. Both need the same three facts about a row and
+# the same wording in the detail panel, so the projection lives here -- pure, and
+# testable without a screen, which is the only way tests/Test-Gui.ps1 can prove the
+# two frontends agree.
+# --------------------------------------------------------------------------
+
+function Get-UiGroupRow {
+    <#
+      One row per category: localised name, how many of its actions are ticked, and
+      whether the cursor is on it.
+    #>
+    [CmdletBinding()]
+    param($State)
+
+    $rows = New-Object System.Collections.Generic.List[object]
+    for ($i = 0; $i -lt $State.Groups.Count; $i++) {
+        $g = $State.Groups[$i]
+        $sel = 0
+        foreach ($a in $State.Catalog.actions) {
+            if ($a.category -eq $g.id -and $State.Selected.ContainsKey($a.id)) { $sel++ }
+        }
+        [void]$rows.Add([pscustomobject]@{
+            index    = $i
+            id       = $g.id
+            name     = $g.name
+            selected = $sel
+            total    = $g.count
+            current  = ($i -eq $State.ListIndex)
+        })
+    }
+    return $rows.ToArray()
+}
+
+function Get-UiActionRow {
+    <#
+      The actions of the focused category, in catalog order, with their tick state.
+    #>
+    [CmdletBinding()]
+    param($State)
+
+    # Not wrapped in @(): Get-TuiGroupAction already returns an array, and wrapping
+    # it would count the array itself as one row.
+    $items = Get-TuiGroupAction -State $State
+    $rows = New-Object System.Collections.Generic.List[object]
+    for ($i = 0; $i -lt $items.Count; $i++) {
+        $a = $items[$i]
+        [void]$rows.Add([pscustomobject]@{
+            index   = $i
+            id      = $a.id
+            title   = (Get-TuiText -Object $a -Base 'title' -Language $State.Language)
+            checked = $State.Selected.ContainsKey($a.id)
+            current = ($i -eq [Math]::Max(0, [Math]::Min($State.DetailIndex, $items.Count - 1)))
+        })
+    }
+    return $rows.ToArray()
+}
+
+function Get-UiSummary {
+    <#
+      The header a window shows instead of a title bar subtitle: what is ticked,
+      and the transient message under it.
+    #>
+    [CmdletBinding()]
+    param($State)
+
+    $zh = ($State.Language -eq 'zh')
+    $count = Get-TuiSelectedCount -State $State
+    return [pscustomobject]@{
+        selected = $count
+        total    = $State.Catalog.actions.Count
+        title    = ("{0}: {1} {2}" -f $(if ($zh) { '计划' } else { 'plan' }), $count, $(if ($zh) { '项' } else { 'actions' }))
+        message  = [string]$State.Message
+    }
+}
+
+function Get-UiDetail {
+    <#
+      What the detail panel should say about whatever has focus: the category under
+      the cursor while the category list is focused, the action otherwise. Same
+      wording as the console panel, composed once so the two cannot drift.
+    #>
+    [CmdletBinding()]
+    param($State)
+
+    $zh = ($State.Language -eq 'zh')
+
+    if ($State.Pane -eq 'list') {
+        if ($State.Groups.Count -eq 0 -or $State.ListIndex -ge $State.Groups.Count) { return $null }
+        $g = $State.Groups[$State.ListIndex]
+        $catObj = @($State.Catalog.categories | Where-Object { $_.id -eq $g.id })[0]
+        $name = Get-TuiText -Object $catObj -Base 'name' -Language $State.Language
+        $sel = 0
+        foreach ($a in $State.Catalog.actions) {
+            if ($a.category -eq $g.id -and $State.Selected.ContainsKey($a.id)) { $sel++ }
+        }
+        return [pscustomobject]@{
+            kind        = 'category'
+            id          = $g.id
+            title       = $(if ($zh) { "[分类] $name" } else { "[category] $name" })
+            stats       = $(if ($zh) { "勾选: {0}/{1} 项" -f $sel, $g.count } else { "Selected: {0}/{1}" -f $sel, $g.count })
+            body        = [string](Get-TuiText -Object $catObj -Base 'description' -Language $State.Language)
+            touches     = ''
+            defaultLine = ''
+        }
+    }
+
+    $cur = Get-TuiActionAt -State $State
+    if (-not $cur) { return $null }
+    $isDefault = ($cur.PSObject.Properties.Name -contains 'default' -and [bool]$cur.default)
+    return [pscustomobject]@{
+        kind        = 'action'
+        id          = $cur.id
+        title       = [string](Get-TuiText -Object $cur -Base 'title' -Language $State.Language)
+        stats       = ''
+        body        = [string](Get-TuiText -Object $cur -Base 'why' -Language $State.Language)
+        touches     = ("{0}{1}" -f $(if ($zh) { '触及: ' } else { 'Touches: ' }), (Get-TuiTargetLine -Action $cur))
+        defaultLine = $(if ($zh) { '默认: ' + $(if ($isDefault) { '是' } else { '否' }) } else { 'Default: ' + $(if ($isDefault) { 'yes' } else { 'no' }) })
+    }
+}
+
+function Test-UiAvailable {
+    <#
+      Whether a window can be drawn here at all. An SSH session, a scheduled task
+      in session 0, or a machine without the assemblies must be told no before
+      anything is created, so the caller can degrade instead of flashing a window
+      nobody can see.
+
+      The three inputs are injectable so tests/Test-Gui.ps1 can exercise every
+      combination without needing -- or avoiding -- a desktop.
+    #>
+    [CmdletBinding()]
+    param(
+        [Nullable[bool]]$UserInteractive,
+        [Nullable[bool]]$Windows,
+        [Nullable[bool]]$Assemblies
+    )
+
+    $interactive = if ($PSBoundParameters.ContainsKey('UserInteractive')) { $UserInteractive } else { [Environment]::UserInteractive }
+    $onWindows   = if ($PSBoundParameters.ContainsKey('Windows')) { $Windows } else { ([Environment]::OSVersion.Platform -eq [PlatformID]::Win32NT) }
+    if (-not $interactive) { return $false }
+    if (-not $onWindows) { return $false }
+
+    if ($PSBoundParameters.ContainsKey('Assemblies')) { return [bool]$Assemblies }
+    try {
+        Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
+        Add-Type -AssemblyName System.Drawing -ErrorAction Stop
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Get-UiPlanText {
+    <#
+      The plan the user is about to apply, as plain text grouped by category --
+      what the console `-Plan` view prints and what a windowed frontend shows in
+      its preview. Built here so both say the same thing, and so a test can read
+      it without a screen.
+    #>
+    [CmdletBinding()]
+    param($State)
+
+    $zh = ($State.Language -eq 'zh')
+    $order = @($State.Catalog.categories | ForEach-Object { $_.id })
+    $lines = New-Object System.Collections.Generic.List[string]
+    foreach ($cid in $order) {
+        $items = @($State.Catalog.actions | Where-Object { $_.category -eq $cid -and $State.Selected.ContainsKey($_.id) })
+        if ($items.Count -eq 0) { continue }
+        $catObj = @($State.Catalog.categories | Where-Object { $_.id -eq $cid })[0]
+        [void]$lines.Add('')
+        [void]$lines.Add(("{0}  ({1})" -f (Get-TuiText -Object $catObj -Base 'name' -Language $State.Language), $items.Count))
+        foreach ($a in $items) {
+            [void]$lines.Add('    ' + (Get-TuiText -Object $a -Base 'title' -Language $State.Language))
+        }
+    }
+    [void]$lines.Add('')
+    $total = Get-TuiSelectedCount -State $State
+    [void]$lines.Add($(if ($zh) { "合计: $total 项" } else { "Total: $total action(s)" }))
+    return $lines.ToArray()
 }

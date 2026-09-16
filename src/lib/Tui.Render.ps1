@@ -3,7 +3,7 @@
     WinCleanKit TUI - renderer.
 
 .DESCRIPTION
-    Turns a state object from Tui.Logic.ps1 into a frame of text lines. This file
+    Turns a state object from Ui.Logic.ps1 into a frame of text lines. This file
     does no drawing and reads no keys: it builds an array of strings and hands it
     back, so the layout can be exercised without a terminal and there is only one
     place that knows about ANSI.
@@ -25,7 +25,7 @@
         +----------------------------------------------------------------+
 
 .NOTES
-    Part of WinCleanKit. Requires Tui.Logic.ps1 to be loaded first.
+    Part of WinCleanKit. Requires Ui.Logic.ps1 to be loaded first.
 #>
 
 Set-StrictMode -Version 2.0
@@ -81,19 +81,6 @@ function Format-TuiCell {
     return $out + ([char]0x2026) + (' ' * [Math]::Max(0, $Width - $used - 1))
 }
 
-function Get-TuiText {
-    <#
-      Localise a catalog object, preferring the Chinese field when asked for it.
-    #>
-    [CmdletBinding()]
-    param($Object, [string]$Base, [string]$Language)
-    if ($Language -eq 'zh') {
-        $alt = "${Base}_zh"
-        if ($Object.PSObject.Properties.Name -contains $alt -and $Object.$alt) { return $Object.$alt }
-    }
-    return $Object.$Base
-}
-
 function Get-TuiWrap {
     <#
       Break text into at most $Max lines that each fit $Width display columns.
@@ -138,24 +125,6 @@ function Get-TuiWrap {
         $lines[$lines.Count - 1] = $last + [char]0x2026
     }
     return , $lines.ToArray()
-}
-
-function Get-TuiTargetLine {
-    <#
-      One line describing what an action actually does, so the detail pane answers
-      "what will this touch?" without the user opening the catalog.
-    #>
-    [CmdletBinding()]
-    param($Action)
-    switch ($Action.target) {
-        'registry'   { return ("{0}\{1}\{2} = {3}" -f $Action.hive, $Action.key, $Action.name, $Action.value) }
-        'service'    { return ("service {0} -> {1}" -f $Action.name, $Action.startType) }
-        'task'       { return ("task {0}{1}" -f $Action.path, $Action.name) }
-        'appx'       { return ("uninstall {0} + revoke provisioning" -f $Action.name) }
-        'path-clean' { return ("delete cache: " + (($Action.paths | ForEach-Object { Split-Path $_ -Leaf }) -join ', ')) }
-        'onedrive'   { return 'remove OneDrive client, block reinstall (data folder untouched)' }
-        default      { return $Action.target }
-    }
 }
 
 function Get-TuiKeyHelp {

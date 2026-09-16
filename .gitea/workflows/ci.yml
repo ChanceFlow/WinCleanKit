@@ -76,3 +76,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./tests/Test-Release.ps1
+
+      - name: Windowed frontend tests
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tests/Test-Gui.ps1

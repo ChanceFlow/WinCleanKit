@@ -13,7 +13,7 @@
 **Docs / 文档:** [Usage](docs/USAGE.md) ([中文](docs/USAGE.zh-CN.md)) · [Safety](docs/SAFETY.md) ([中文](docs/SAFETY.zh-CN.md)) · [Limitations](docs/LIMITATIONS.md) ([中文](docs/LIMITATIONS.zh-CN.md)) · [Catalog](docs/CATALOG.md) ([中文](docs/CATALOG.zh-CN.md)) · [Linting](docs/LINTING.md)  
 **Project / 项目:** [Contributing](CONTRIBUTING.md) ([中文](CONTRIBUTING.zh-CN.md)) · [Security](SECURITY.md) ([中文](SECURITY.zh-CN.md)) · [Code of Conduct](CODE_OF_CONDUCT.md) ([中文](CODE_OF_CONDUCT.zh-CN.md)) · [Changelog](CHANGELOG.md) · [License](LICENSE)
 
-![WinCleanKit running in a Windows console: categories on the left, 74 actions on the right, and a plain-language explanation of the highlighted one](assets/tui-english.png)
+![The WinCleanKit window: areas on the left with their counts, 74 changes on the right, and a plain-language explanation of the highlighted one](assets/gui-english.png)
 
 An ad in your Start menu. A "suggested" app you never installed. A lock-screen picture that
 is quietly selling you something. A widget feed you cannot switch off, a search box that
@@ -23,7 +23,9 @@ off are scattered across a dozen settings screens and registry keys.
 WinCleanKit turns it off for you — **but only the parts you tick.** It shows every change in
 plain language first, applies nothing without your go-ahead, and writes a restore point to
 your Desktop before it touches anything. It is one folder and a `run.bat`: no installer, no
-account, no service left running, and no telemetry of its own.
+account, no service left running, and no telemetry of its own. It opens as a normal Windows
+window; on a machine that cannot show one it falls back to a full-screen console interface,
+and then to a numbered menu.
 
 - **You decide.** 45 safe basics are ticked for you; the other 29 are one keypress away. Nothing runs that you did not select, and nothing gets quietly re-added.
 - **You see it first.** Each of the 74 actions says what it changes, why it exists and what it touches, before you apply anything.
@@ -36,9 +38,9 @@ account, no service left running, and no telemetry of its own.
 ## Download and run
 
 1. **[Download the latest release](https://github.com/ChanceFlow/WinCleanKit/releases/latest)** and unzip `WinCleanKit-<version>.zip` anywhere — your Desktop is fine.
-2. Double-click **`run.bat`**.
+2. Double-click **`run.bat`**. A window opens.
 3. Say yes to the Windows prompt. Machine-wide settings need administrator rights.
-4. Pick your language, look down the list, tick what you want, then press **`x`** to apply.
+4. Pick your language, read the list, tick what you want, then press **Apply**.
 
 Nothing is written to your system until you confirm the plan.
 
@@ -50,12 +52,16 @@ Nothing is written to your system until you confirm the plan.
 <details>
 <summary><b>Other ways to start it, and how to check the download</b></summary>
 
-**Plain text instead of the full-screen interface** — for old terminals, screen readers, or
-if you simply prefer menus:
+**The console interfaces** — for a machine with no desktop, an old terminal, a screen
+reader, or if you simply prefer them:
 
 ```bat
-run.bat --simple
+run.bat --tui       # full-screen console interface
+run.bat --simple    # numbered menu: automation, screen readers, no ANSI
 ```
+
+**A dry run from the window:** `run.bat --gui --dry-run` walks the whole plan and changes
+nothing — which is also how the Apply button is verified in testing.
 
 **Skip the language question:** `run.bat --zh` or `run.bat --en`.
 
@@ -84,12 +90,20 @@ readable in `src/`.
 
 ## What it looks like
 
-![The same interface in Chinese](assets/tui-chinese.png)
+![The same window in Chinese](assets/gui-chinese.png)
 
-The whole interface is keyboard-driven, and every key is on the bottom line of the window —
-press `?` for the full list. The left column is the areas and their counts; the right column
-is the changes themselves; the panel bottom-left explains whatever is highlighted. Nothing
-about it needs the mouse, and nothing about it needs reading a manual first.
+The left column is the areas and their counts; the right column is the changes themselves; the
+panel bottom-left explains whatever is highlighted, in the language you picked. Everything works
+with the mouse and with the keyboard: `Ctrl+A` ticks the whole area, `Ctrl+N` clears it, `Ctrl+L`
+switches language, `F5` previews the plan, `F9` applies it.
+
+The console interface is still there, and still the fallback:
+
+![The full-screen console interface: the same areas, changes and explanation drawn in characters](assets/tui-english.png)
+
+It is keyboard-only, every key is on its bottom line, and `?` shows the full list. It is what
+runs when there is no desktop to open a window on (an SSH session, a scheduled task), and what
+people who never want a mouse can use instead.
 
 <details>
 <summary><b>Keyboard</b></summary>
@@ -268,18 +282,19 @@ arguing with anyone.
 WinCleanKit/
 ├── run.bat                      double-click launcher
 ├── src/
-│   ├── WinCleanKit.bat          elevation, menus, confirmation
+│   ├── WinCleanKit.bat          elevation, interface choice, confirmation
 │   ├── WinCleanKit.ps1          the engine and the terminal design system
-│   ├── lib/                     the full-screen UI: logic, renderer, key loop
+│   ├── lib/                     the shared UI state machine + the console renderer
+│   ├── gui/                     the windowed frontend (WinForms)
 │   └── menu/menu.ps1            menu data provider
 ├── catalog/catalog.json         all 74 actions, as data
 ├── docs/                        usage, safety, limitations, generated catalog
 ├── release/                     front page of the packaged download
-├── tests/                       nine gates
+├── tests/                       ten gates
 └── tools/                       New-CatalogDoc.ps1, New-ReleasePackage.ps1
 ```
 
-Nine gates run in CI, on every push, on Windows and Linux:
+Ten gates run in CI, on every push, on Windows and Linux:
 
 | Gate | Question it answers |
 |---|---|
@@ -292,6 +307,7 @@ Nine gates run in CI, on every push, on Windows and Linux:
 | `tests/Test-Tui.ps1` | Does the UI's logic behave, and does every change force a repaint? |
 | `tests/Test-TuiRender.ps1` | Is the frame geometry and the painting contract intact? |
 | `tests/Test-Release.ps1` | Does the packaged download contain the product and nothing else? |
+| `tests/Test-Gui.ps1` | Does the window say what the console says, and does it build without a desktop? |
 
 `tools/New-ReleasePackage.ps1` builds `dist/WinCleanKit-<version>.zip` from a closed list of
 files, and fails the build if a file is in neither list — so nothing new can quietly ship to

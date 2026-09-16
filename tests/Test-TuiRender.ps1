@@ -41,7 +41,7 @@ function Check {
 }
 
 Write-Head 'loading logic + renderer'
-. (Join-Path $root 'src/lib/Tui.Logic.ps1')
+. (Join-Path $root 'src/lib/Ui.Logic.ps1')
 . (Join-Path $root 'src/lib/Tui.Render.ps1')
 $cat = Get-Content (Join-Path $root 'catalog/catalog.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 

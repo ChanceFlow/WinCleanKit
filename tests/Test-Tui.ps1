@@ -3,7 +3,7 @@
     Behaviour tests for the TUI's logic layer. Changes nothing, needs no terminal.
 
 .DESCRIPTION
-    src/lib/Tui.Logic.ps1 is pure functions over a plain hashtable, so the parts of
+    src/lib/Ui.Logic.ps1 is pure functions over a plain hashtable, so the parts of
     the interactive UI that can be decided without a terminal are tested here:
     cursor movement and clamping, mode switching, the default selection, selection
     toggling, group and whole-catalog selection, the plan the UI
@@ -25,7 +25,7 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
-$logic = Join-Path $root 'src/lib/Tui.Logic.ps1'
+$logic = Join-Path $root 'src/lib/Ui.Logic.ps1'
 $catalogPath = Join-Path $root 'catalog/catalog.json'
 
 function Write-Head {

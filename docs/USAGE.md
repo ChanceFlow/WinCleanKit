@@ -14,8 +14,12 @@ Run it from an **elevated** PowerShell for machine-level (`HKLM`) changes. Read-
 
 ## Starting it
 
-Double-click `run.bat`, or run `src\WinCleanKit.bat`. Either way it elevates, then
-opens the full-screen interface.
+Double-click `run.bat`, or run `src\WinCleanKit.bat`. Either way it elevates.
+
+`run.bat` asks for the **windowed interface**. `src\WinCleanKit.bat` on its own opens the
+full-screen console interface instead, which is what runs when there is no desktop to put a
+window on. Each interface reports whether it could start, so the launcher degrades rather than
+failing: window, then console, then the numbered menu.
 
 **It opens on a language chooser.** That screen is bilingual on purpose: it is shown
 before a language has been picked, so it says each line twice — Chinese first, then
@@ -36,7 +40,9 @@ run.bat --en
 | `--lang zh` / `--lang en` | Open in that language, with no chooser. |
 | `--lang=zh` / `--lang=en` | The same thing. |
 | `--zh` / `--en` | The same thing, spelled short. |
-| `--simple` / `--no-tui` | The numbered menu instead of the full-screen interface, for automation and screen readers. |
+| `--gui` | The windowed interface. `run.bat` passes this for you. |
+| `--tui` | Force the full-screen console interface, even when a window is possible. |
+| `--simple` / `--no-tui` | The numbered menu instead of either interface, for automation and screen readers. |
 
 An unrecognised value falls back to the chooser rather than guessing.
 
@@ -100,7 +106,9 @@ reliable — otherwise the default set would silently add it back.
 | Option | Meaning |
 |---|---|
 | `-Language en\|zh` | Display language for the engine's own output. Default `en`. The catalog carries both. |
-| `-TuiLanguage en\|zh\|ask` | The language the full-screen interface opens in. `ask` — the default — opens the chooser. |
+| `-Gui` | Open the windowed interface. In `src\WinCleanKit.bat` this is `--gui`, and `run.bat` passes it for you. |
+| `-Tui` | Open the full-screen console interface. In `src\WinCleanKit.bat` this is `--tui`. |
+| `-TuiLanguage en\|zh\|ask` | The language either interactive interface opens in. `ask` — the default — opens the chooser. |
 | `-NoPrompt` | Never ask. Required for unattended runs; without it you are asked to type `APPLY`. |
 | `-EmitJson` | Print a machine-readable result object on stdout. |
 

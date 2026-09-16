@@ -7,6 +7,34 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- **A windowed interface.** `run.bat` now opens a normal Windows window — areas and their counts
+  on the left, the changes on the right, the plain-language explanation underneath, and buttons
+  for preview, apply, restore, language and about — instead of the full-screen console UI.
+  - It is a **WinForms** shell over the same state machine, chosen because WinForms ships with
+    Windows: the download stays a folder with no installer, no runtime to fetch and nothing for
+    the user to trust beyond the scripts they can read. Verified on the target machine before
+    writing a line of it (`System.Windows.Forms` loads under Windows PowerShell 5.1 with nothing
+    installed, and a form can be constructed with no desktop present).
+  - `src/lib/Tui.Logic.ps1` is now `src/lib/Ui.Logic.ps1`: navigation, selection, plan assembly
+    and localisation were never console-specific, and both frontends drive them. The console
+    renderer and key loop are unchanged, and still the fallback.
+  - Three interfaces now degrade in order — window, full-screen console, numbered menu. Each
+    reports whether it could start (exit code 3 means "no desktop here"), so an SSH session or a
+    scheduled task lands on the console UI instead of failing.
+  - `-Gui` / `--gui` selects the window, `--tui` forces the console one, `--simple` still gives
+    the numbered menu, and `-DryRun` reaches the window so its Apply button can be exercised
+    without changing anything.
+  - The window runs the engine as a child process with an authoritative `-FromFile` id list, so
+    the apply path, the journal and the restore script are the same code the console UI uses.
+- **`tests/Test-Gui.ps1`**, the tenth gate (69 checks). It covers the view-model projections, the
+  form construction without a desktop, the checkbox path (lifted out of its event handler so it
+  can be called at all), and — the one that matters — **parity**: for the same state, the ticks
+  the window lists must be the ticks the console frame draws. That comparison is itself tested
+  against two states that must disagree, so a pass cannot come from a check that detects
+  nothing. It also refuses a UI file that assigns to an engine parameter, which is a real bug
+  that only appears when the interface is used (`$script:Gui` against `[switch] $Gui`).
+
+### Changed
 - **A gate on what the default set is allowed to be.** "Tick nothing, press apply, and you get
   the ads closed and the telemetry off, with no surprises" is now checked rather than claimed:
   `tests/Test-Catalog.ps1` fails if any action that is on by default describes a trade-off, so
