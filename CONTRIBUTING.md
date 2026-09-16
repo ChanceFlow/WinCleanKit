@@ -1,4 +1,4 @@
-[English](CONTRIBUTING.md) · [中文](CONTRIBUTING.zh-CN.md) · **Docs:** [README](README.md) · [Usage](docs/USAGE.md) · [Safety](docs/SAFETY.md) · [Limitations](docs/LIMITATIONS.md) · [Catalog](docs/CATALOG.md) · [Linting](docs/LINTING.md)
+﻿[English](CONTRIBUTING.md) · [中文](CONTRIBUTING.zh-CN.md) · **Docs:** [README](README.md) · [Usage](docs/USAGE.md) · [Safety](docs/SAFETY.md) · [Limitations](docs/LIMITATIONS.md) · [Catalog](docs/CATALOG.md) · [Linting](docs/LINTING.md)
 
 # Contributing to WinCleanKit
 
@@ -121,6 +121,47 @@ enforces this for tracked files.
 
 `tests/Test-Docs.ps1` checks all of the above: link resolution, pair completeness,
 bidirectional linking, switcher placement, and the absence of private addresses.
+
+## How the pieces fit together
+
+- **The catalog is the single source of truth.** `catalog/catalog.json` is the only place an
+  action is defined: the UI renders it, the engine executes it, the tests validate it, and
+  `tools/New-CatalogDoc.ps1` generates the documentation from it. No action exists in code that
+  is not in the catalog.
+- **The `.bat` never touches the registry.** It resolves intent and delegates. That is what
+  keeps the front-end readable and the engine testable on its own.
+- **`.ps1` files carry a UTF-8 BOM on purpose.** Windows PowerShell 5.1 decodes a BOM-less
+  script with the machine's ANSI codepage, which turns Chinese strings into mojibake;
+  `.gitattributes` marks them `-text` so nothing rewrites their bytes. `Test-Parse.ps1` enforces
+  the BOM (and rejects a doubled one).
+- **Writes are verified by reading back.** A few Windows keys accept a write and silently drop
+  it, so the engine reads the value back and reports `[!!]` rather than claiming success.
+- **The release package is built from a closed list.** `tools/New-ReleasePackage.ps1` fails if a
+  file is in neither the include nor the exclude list, so nothing new can quietly ship to users
+  or quietly fail to.
+
+## The terminal design system
+
+The console output is not ad-hoc `Write-Host` calls. `src/WinCleanKit.ps1` owns one palette and
+one status vocabulary, and `src/WinCleanKit.bat` mirrors the same colour roles, so the front-end
+and the engine read as one product.
+
+- **Semantic colour roles, not raw colours.** `brand`, `accent`, `success`, `caution`, `danger`,
+  `muted`. Changing the palette is one line in `$script:Ink`.
+- **Width-aware alignment.** Chinese glyphs occupy two terminal columns but count as one
+  character, so PowerShell's own `{0,-20}` leaves CJK tables ragged. `Format-Text` measures
+  display width, which is why the counts line up identically in both languages.
+- **Colour is never the only signal.** Every state carries a text marker (`[ok]`, `[dry]`,
+  `[--]`, `[!!]`, `[XX]`), and colour degrades to plain text when output is redirected, piped,
+  or `NO_COLOR` is set -- so logs and CI capture stay clean.
+- **Progress for long runs.** A run prints `[ 12/45]  26%`, so it never looks frozen.
+- **No flashing.** The front-end repositions the cursor and redraws over the previous frame
+  instead of calling `CLS` on every screen, which also keeps the last lines as scrollback.
+- **The full-screen UI paints like Terminal.Gui's NetDriver** -- absolute row positioning, no
+  line feed, the screen buffer pinned to the window -- because a full-width row plus a line feed
+  scrolls the window on every repaint. `tools/Test-TuiScroll.ps1` reads the console buffer back
+  in a real window and checks it; see [docs/LIMITATIONS.md](docs/LIMITATIONS.md) for why that one
+  check has to be run by hand.
 
 ## Commits and pull requests
 

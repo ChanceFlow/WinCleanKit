@@ -6,6 +6,26 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- **The README is a product page now, not a repository tour.** It used to open with badges,
+  an ASCII frame of the interface, design notes, a directory tree and a count of gate checks.
+  All of it was true, and none of it answered the two questions someone arriving from a search
+  actually has: what will this do to my PC, and how do I run it. It now opens with a real
+  capture of the running application, a plain-language explanation of what "bloat" means here,
+  one numbered download-and-run path, the changes grouped by what a user would notice, an
+  honest answer to "is it safe?", and eight questions people genuinely ask -- with the
+  alternatives (plain menu, command line, verifying the download) folded into collapsible
+  sections so they are there without being in the way. The repository layout, the design notes
+  and the terminal design system moved to `CONTRIBUTING.md`, where the people who care about
+  them are already reading; `assets/` holds the screenshots, which are captures of the running
+  program rather than mock-ups. `Test-Release.ps1` and the packager's exclusion list both name
+  `assets/`, so the download gained nothing and lost nothing: rebuilding the package from the
+  `v0.1.0` tag reproduces every one of its 21 files byte for byte. (Two zip headers still differ
+  between that published archive and a rebuild -- the release front page and its Chinese
+  counterpart, which the packager rewrites rather than copies, used to carry the build time
+  instead of the file's own. They now carry the file's time, so the next release's archive is
+  reproducible from its own tag archive rather than merely equivalent.)
+
 ## [0.1.0] - 2026-09-15
 
 First public release: 74 actions in 6 categories, a full-screen bilingual TUI, and a

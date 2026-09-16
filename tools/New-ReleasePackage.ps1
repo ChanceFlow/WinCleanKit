@@ -77,7 +77,9 @@ $RewriteRootLinks = @('release/README.md', 'release/README.zh-CN.md')
 
 # Development machinery: the tests that check the product, the tools that
 # generate its documentation, the CI definitions, and editor configuration.
-$ExcludeDir = @('tests', 'tools', 'localization', 'dist', '.git', '.github', '.gitea', '.vscode')
+# Screenshots for the project page: useful to someone browsing the repository, dead
+# weight in a download whose front page does not show them.
+$ExcludeDir = @('tests', 'tools', 'localization', 'assets', 'dist', '.git', '.github', '.gitea', '.vscode')
 $ExcludeFile = @(
     '.gitignore'
     '.gitattributes'
@@ -157,6 +159,10 @@ try {
             # text has to resolve in both, so the "../" comes off on the way in.
             $text = (Get-Content $source -Raw -Encoding UTF8).Replace('](../', '](')
             $handle = $archive.CreateEntry($entry, [System.IO.Compression.CompressionLevel]::Optimal)
+            # Same provenance as every other entry: the file's own timestamp, not the
+            # moment of the build, so two builds of the same tree produce the same
+            # bytes instead of differing in exactly these two headers.
+            $handle.LastWriteTime = (Get-Item $source).LastWriteTime
             $writer = New-Object System.IO.StreamWriter($handle.Open(), (New-Object System.Text.UTF8Encoding($false)))
             try { $writer.Write($text) } finally { $writer.Dispose() }
             continue

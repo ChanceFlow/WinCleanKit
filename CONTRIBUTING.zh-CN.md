@@ -1,4 +1,4 @@
-[中文](CONTRIBUTING.zh-CN.md) · [English](CONTRIBUTING.md) · **文档：** [中文说明](README.zh-CN.md) · [用法](docs/USAGE.zh-CN.md) · [安全](docs/SAFETY.zh-CN.md) · [限制](docs/LIMITATIONS.zh-CN.md) · [行动目录](docs/CATALOG.md) · [代码规范](docs/LINTING.md)
+﻿[中文](CONTRIBUTING.zh-CN.md) · [English](CONTRIBUTING.md) · **文档：** [中文说明](README.zh-CN.md) · [用法](docs/USAGE.zh-CN.md) · [安全](docs/SAFETY.zh-CN.md) · [限制](docs/LIMITATIONS.zh-CN.md) · [行动目录](docs/CATALOG.md) · [代码规范](docs/LINTING.md)
 
 # 参与 WinCleanKit 贡献
 
@@ -131,6 +131,36 @@ CI 会校验它是最新的（`tools/New-CatalogDoc.ps1 -Check`）。
 
 `tests/Test-Docs.ps1` 会检查：链接是否可达、双语对是否齐备且双向、导航行是否在开头、
 以及仓库内**是否出现内网地址**。任一不满足都会让 CI 失败。
+
+## 各部分的职责
+
+- **Catalog 是唯一事实来源。** `catalog/catalog.json` 是操作被定义的唯一地方：UI 渲染它、引擎执行它、
+  测试校验它、`tools/New-CatalogDoc.ps1` 由它生成文档。代码里不存在 catalog 之外的操作。
+- **`.bat` 从不直接碰注册表。** 它只解析意图并委派。因此前端保持可读，引擎可以独立测试。
+- **`.ps1` 文件刻意带 UTF-8 BOM。** Windows PowerShell 5.1 会把无 BOM 的脚本按机器 ANSI 代码页解码，
+  中文会变乱码；`.gitattributes` 把它们标为 `-text`，避免字节被改写。`Test-Parse.ps1` 会强制检查
+  BOM（并且拒绝重复的 BOM）。
+- **写入之后必定读回校验。** 少数 Windows 键会「接受写入然后静默丢弃」，所以引擎会读回该值，
+  报 `[!!]` 而不是假称成功。
+- **发布包按封闭清单生成。** `tools/New-ReleasePackage.ps1` 只要发现某个文件两份清单都没匹配上就直接失败，
+  因此新增文件既不会悄悄发给用户，也不会悄悄漏发。
+
+## 终端设计系统
+
+控制台输出不是随手写的 `Write-Host`。`src/WinCleanKit.ps1` 统一持有一套配色与一套状态词表，
+`src/WinCleanKit.bat` 复用同一组颜色角色，因此前端与引擎看起来是同一个产品。
+
+- **语义色角色，而非硬编码颜色。** `brand`、`accent`、`success`、`caution`、`danger`、`muted`。
+  换配色只需改 `$script:Ink` 里的一行。
+- **宽度感知对齐。** 中文字形占两个终端列却只算一个字符，PowerShell 自带的 `{0,-20}` 会让中英混排的
+  表格参差不齐。`Format-Text` 按显示宽度补齐 —— 这就是为什么两种语言下的计数能对齐到同一列。
+- **颜色从来不是唯一信号。** 每种状态都有文字标记（`[ok]`、`[dry]`、`[--]`、`[!!]`、`[XX]`），
+  并且当输出被重定向、进入管道或设置了 `NO_COLOR` 时，颜色会降级为纯文本 —— 日志与 CI 采集始终干净。
+- **长任务有进度。** 运行过程会打印 `[ 12/45]  26%`，绝不会看起来卡死。
+- **不闪屏。** 前端改用光标归位、在原帧上重绘，而不是每屏都 `CLS`；同时保留最近若干行作为回看。
+- **全屏界面按 Terminal.Gui 的 NetDriver 方式绘制** —— 逐行绝对定位、不写换行、把屏幕缓冲区钉死到窗口大小 ——
+  因为「满宽的一行 + 一个换行」会让窗口每次重绘都滚动。`tools/Test-TuiScroll.ps1` 会在真实窗口里把
+  控制台缓冲区读回来比对；为什么这一项只能人工跑，见 [docs/LIMITATIONS.zh-CN.md](docs/LIMITATIONS.zh-CN.md)。
 
 ## 提交与 PR
 

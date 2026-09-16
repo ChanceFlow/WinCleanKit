@@ -106,7 +106,7 @@ try {
         $missing = @($required | Where-Object { -not $names.Contains($prefix + $_) })
         Check ('all {0} files the product needs are present' -f $required.Count) ($missing.Count -eq 0) ('missing: ' + ($missing -join ', '))
 
-        $devDirs = @('tests', 'tools', 'localization', '.github', '.gitea', '.vscode')
+        $devDirs = @('tests', 'tools', 'localization', 'assets', '.github', '.gitea', '.vscode')
         # Contributor documents are left out too: someone who wants to run the tool
         # does not need the code of conduct, and the release front page does not
         # link to them.
