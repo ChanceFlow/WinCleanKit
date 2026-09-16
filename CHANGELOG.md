@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **A gate on what the default set is allowed to be.** "Tick nothing, press apply, and you get
+  the ads closed and the telemetry off, with no surprises" is now checked rather than claimed:
+  `tests/Test-Catalog.ps1` fails if any action that is on by default describes a trade-off, so
+  the costly ones -- error reporting, location, settings sync, the lock-screen wallpaper going
+  static, the Settings home page folding away, uninstalling apps -- cannot quietly become
+  defaults. Verified by flipping one of them on and watching the gate fail with its id.
+
 ### Changed
 - **The README is a product page now, not a repository tour.** It used to open with badges,
   an ASCII frame of the interface, design notes, a directory tree and a count of gate checks.
@@ -25,6 +33,21 @@ All notable changes to this project are documented here. The format follows
   counterpart, which the packager rewrites rather than copies, used to carry the build time
   instead of the file's own. They now carry the file's time, so the next release's archive is
   reproducible from its own tag archive rather than merely equivalent.)
+
+### Fixed
+- **The generated catalog labelled the Chinese explanation as "代价 / Cost".** It has held the
+  Chinese version of `why` ever since the schema was reduced to one rationale per language, so
+  the two lines read as if they were different fields saying different things. Both are now
+  labelled as what they are -- `Why / 为什么 [EN]` and `[中文]` -- and the Chinese pointer page
+  says the same. Found while answering a question about the default set, by reading the page the
+  generator had produced.
+- **`privacy.delivery-optimization-no-p2p` described half of what it does.** Its text said it
+  stops *uploading* update packages to other people; the value it writes,
+  `DODownloadMode = 0`, is Delivery Optimization's "CDN only" mode, so it stops taking updates
+  from other PCs as well. Confirmed against the policy definition in the Windows
+  `PolicyDefinitions\DeliveryOptimization.admx`, where 0 is `DownloadMode_CdnOnly`. The
+  description now states both directions and the trade-off -- no LAN peering between machines --
+  which is exactly why the action stays opt-in.
 
 ## [0.1.0] - 2026-09-15
 
