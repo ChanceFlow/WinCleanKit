@@ -13,7 +13,7 @@
 **Docs / 文档:** [Usage](docs/USAGE.md) ([中文](docs/USAGE.zh-CN.md)) · [Safety](docs/SAFETY.md) ([中文](docs/SAFETY.zh-CN.md)) · [Limitations](docs/LIMITATIONS.md) ([中文](docs/LIMITATIONS.zh-CN.md)) · [Catalog](docs/CATALOG.md) ([中文](docs/CATALOG.zh-CN.md)) · [Linting](docs/LINTING.md)  
 **Project / 项目:** [Contributing](CONTRIBUTING.md) ([中文](CONTRIBUTING.zh-CN.md)) · [Security](SECURITY.md) ([中文](SECURITY.zh-CN.md)) · [Code of Conduct](CODE_OF_CONDUCT.md) ([中文](CODE_OF_CONDUCT.zh-CN.md)) · [Changelog](CHANGELOG.md) · [License](LICENSE)
 
-![The WinCleanKit window: areas on the left with their counts, 74 changes on the right, and a plain-language explanation of the highlighted one](assets/gui-english.png)
+![The WinCleanKit window: five steps down the left, the areas across the top, and a plain-language explanation of the highlighted change](assets/gui-english.png)
 
 An ad in your Start menu. A "suggested" app you never installed. A lock-screen picture that
 is quietly selling you something. A widget feed you cannot switch off, a search box that
@@ -76,7 +76,7 @@ nothing — which is also how the Apply button is verified in testing.
 zip:
 
 ```powershell
-Get-FileHash .\WinCleanKit-0.1.0.zip -Algorithm SHA256
+Get-FileHash .\WinCleanKit-0.2.0.zip -Algorithm SHA256
 ```
 
 **Windows may warn you.** The scripts are not code-signed, so SmartScreen sometimes says
@@ -92,10 +92,17 @@ readable in `src/`.
 
 ![The same window in Chinese](assets/gui-chinese.png)
 
-The left column is the areas and their counts; the right column is the changes themselves; the
-panel bottom-left explains whatever is highlighted, in the language you picked. Everything works
-with the mouse and with the keyboard: `Ctrl+A` ticks the whole area, `Ctrl+N` clears it, `Ctrl+L`
-switches language, `F5` previews the plan, `F9` applies it.
+Five steps down the left, and nothing happens until the last one. **Overview** says what this is,
+what your machine is, and offers the recommended set in one button. **Choose** is the catalog:
+one chip per area carrying its own tick count, a search box over all 74 changes, and the
+explanation of whatever is highlighted. **Apply** shows the plan as a list — with the counts by
+kind and how many of them uninstall something — and only then runs it, printing the engine's
+output as it goes. **Restore** lists the backups your runs left on the Desktop. **About** is the
+version, the licence and the keys.
+
+Everything works with the mouse and with the keyboard: `Ctrl+1`–`Ctrl+5` move between steps,
+`Ctrl+F` searches, `Ctrl+A` ticks the whole area, `Ctrl+N` clears it, `Ctrl+L` switches language,
+`F5` previews the plan, `F9` applies it.
 
 The console interface is still there, and still the fallback:
 

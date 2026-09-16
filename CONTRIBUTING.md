@@ -153,7 +153,22 @@ inside a background runspace whose output a UI timer drains onto the progress ba
 same engine invocation the console interface already makes for a preview; the process boundary
 is the only difference, and it is what keeps the window responsive for 74 actions.
 
-Two traps worth knowing before you touch that file:
+**Colour lives in one place.** `$script:GuiPalette` holds a light and a dark set of semantic
+roles (`window`, `card`, `text`, `muted`, `border`, `controlBorder`, `brand`, `accent`, `success`,
+`caution`, `danger`, `selection`), and layout code asks for a role, never a colour. That is the
+same vocabulary the console frontend uses in `$script:Ink`, which is what keeps the two looking
+like one product. A hex value outside that table fails the gate, and so does a text pair that
+drops below 4.5:1 — the check measures the palette, so a "small tweak" cannot quietly make
+something unreadable.
+
+**The window is five pages, and the run button is not on the page where you tick things.**
+`WinCleanKit.gui.ps1` builds a navigation rail over five page panels — overview, choose, apply,
+restore, about — and `Show-GuiPage` is what switches between them; each rail entry carries its
+step's live state. The gate holds you to that shape: `runIt` must not be a child of the page you
+select on. Choosing and running are separate steps, and putting them back together fails
+`Test-Gui.ps1`.
+
+Four traps worth knowing before you touch that file:
 
 - **A handler runs in its own scope.** Shared state lives in `$script:GuiApp`; a local assignment
   inside an event handler is gone by the next click. Its name avoids every parameter of
@@ -161,6 +176,15 @@ Two traps worth knowing before you touch that file:
   variable the engine declared as `[switch]` throws at runtime. `Test-Gui.ps1` checks that.
 - **Event arguments are in `$args`, not `$_`.** `$_` is not the event object for an `Add_*`
   handler, and reading `$_.KeyCode` fails at the moment a user presses a key.
+- **PowerShell's own read-only variables collide too.** `$home` is a directory, not a place to put
+  a panel: the assignment throws `VariableNotWritable` while the window is being built.
+  `Test-Gui.ps1` checks every assignment against the reserved names, next to the engine-parameter
+  check — that is how `$home` was caught before a user was.
+- **A check box drawn as a button measures its own text short.** `Appearance = 'Button'` under
+  `AutoSize` painted `Privacy  7/10` as `Privacy 7/` on a real screen, and `&` is a mnemonic in a
+  button label, so the catalog's `Ads & suggestions` came out as `Ads suggestions`. `Format-GuiChip`
+  sizes itself from `TextRenderer.MeasureText` with `NoPrefix`, and the gate checks both against a
+  real control.
 
 `tests/Test-Gui.ps1` covers the projections, the parity between the two frontends, the form
 construction (which works without a desktop) and the checkbox path. What it cannot cover is how

@@ -76,6 +76,10 @@ param(
     # state machine and runs the engine itself as a child process, so the caller
     # only has to get out of the way afterwards.
     [switch]   $Gui,
+    # Which theme the window opens in. 'system' follows Windows; light and dark are
+    # for checking or for overriding a desktop you disagree with.
+    [ValidateSet('system', 'light', 'dark')]
+    [string]   $GuiTheme = 'system',
     [switch]   $NoTui,
     # 'ask' opens the TUI on its language chooser, which is the only way to offer
     # the choice without already knowing which language the reader can read.
@@ -92,7 +96,7 @@ param(
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
-$script:EngineVersion = '0.1.0'
+$script:EngineVersion = '0.2.0'
 $script:Root          = Split-Path -Parent $PSScriptRoot
 $script:CatalogPath   = Join-Path $script:Root 'catalog/catalog.json'
 $script:Lang          = $Language
@@ -740,10 +744,11 @@ function Open-GuiSession {
       a run happened is reported through $script:UiApplied.
     #>
     [CmdletBinding()]
-    param()
+    param([string]$Theme = 'system')
 
     $result = Show-GuiSession -Catalog (Get-Catalog) -Engine $PSCommandPath `
-                        -Language $TuiLanguage -Version $script:EngineVersion -DryRun:$DryRun
+                        -Language $TuiLanguage -Version $script:EngineVersion `
+                        -ThemeOverride $Theme -DryRun:$DryRun
     return $result
 }
 
@@ -810,7 +815,7 @@ try {
         # The window owns the whole interaction. When it applied something, the run
         # has already happened -- in a child process, with the same journal and the
         # same code path -- so this process only reports how it ended.
-        $null = Open-GuiSession
+        $null = Open-GuiSession -Theme $GuiTheme
         if ($script:UiApplied) {
             if ($TuiExitCode) { exit 0 }
             return

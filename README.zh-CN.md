@@ -13,7 +13,7 @@
 **文档:** [用法](docs/USAGE.zh-CN.md) ([EN](docs/USAGE.md)) · [安全](docs/SAFETY.zh-CN.md) ([EN](docs/SAFETY.md)) · [限制](docs/LIMITATIONS.zh-CN.md) ([EN](docs/LIMITATIONS.md)) · [行动目录](docs/CATALOG.md) ([中文](docs/CATALOG.zh-CN.md)) · [代码规范](docs/LINTING.md)  
 **项目:** [参与贡献](CONTRIBUTING.zh-CN.md) ([EN](CONTRIBUTING.md)) · [安全政策](SECURITY.zh-CN.md) ([EN](SECURITY.md)) · [行为准则](CODE_OF_CONDUCT.zh-CN.md) ([EN](CODE_OF_CONDUCT.md)) · [更新日志](CHANGELOG.md) · [许可证](LICENSE)
 
-![WinCleanKit 的窗口：左边是分类与勾选进度，右边是 74 条操作，左下角用大白话解释当前高亮的那一条](assets/gui-chinese.png)
+![WinCleanKit 的窗口：左侧是五个步骤，顶部是各个分类，右边用大白话解释当前高亮的那一条](assets/gui-chinese.png)
 
 开始菜单里的广告、「为你推荐」里从没装过的应用、锁屏上那张其实在推销的图片、关不掉的
 小组件资讯流、搜出来全是必应和 MSN 的搜索框 —— Windows 11 默认就把这些全开着，而关掉它们
@@ -70,7 +70,7 @@ run.bat --simple    # 编号菜单：自动化、屏幕阅读器、不支持 ANS
 **先校验再运行。** 每个 release 都在 zip 旁边提供 `.sha256` 文件：
 
 ```powershell
-Get-FileHash .\WinCleanKit-0.1.0.zip -Algorithm SHA256
+Get-FileHash .\WinCleanKit-0.2.0.zip -Algorithm SHA256
 ```
 
 **Windows 可能弹警告。** 这些脚本没有做代码签名，所以 SmartScreen 有时会说「Windows 已保护你的电脑」——
@@ -85,8 +85,13 @@ Get-FileHash .\WinCleanKit-0.1.0.zip -Algorithm SHA256
 
 ![同一个窗口的英文版](assets/gui-english.png)
 
-左列是分类和各自的勾选进度，右列是具体条目，左下角用你选的语言解释当前高亮项。
-鼠标和键盘都能用：`Ctrl+A` 勾选整个分类、`Ctrl+N` 取消、`Ctrl+L` 切换语言、`F5` 预览计划、`F9` 执行。
+左侧五步，最后一步之前什么都不会发生。**概览** 说明这是什么、你的机器是什么，并用一个按钮给出推荐设置。
+**选择** 是目录本身：一个分类一个按钮、各自带着勾选进度，一个搜索框管全部 74 条改动，右边用大白话解释当前高亮的那一条。
+**执行** 先把清单列出来 —— 按类型给出数量、并说明其中几条会卸载东西 —— 然后才动手，边跑边打印引擎的输出。
+**还原** 列出每次执行留在桌面的备份。**关于** 是版本、许可和按键。
+
+鼠标和键盘都能用：`Ctrl+1`–`Ctrl+5` 切换步骤、`Ctrl+F` 搜索、`Ctrl+A` 勾选整个分类、`Ctrl+N` 取消、
+`Ctrl+L` 切换语言、`F5` 预览计划、`F9` 执行。
 
 控制台界面依然保留，而且依然是兜底方案：
 

@@ -11,7 +11,7 @@
     Frame layout (width x height, minimum 60x18):
 
         +----------------------------------------------------------------+
-        | WinCleanKit  v0.1.0   plan: 45 actions                        |  header
+        | WinCleanKit  v0.2.0   plan: 45 actions                        |  header
         +--------------------------------+-----------------------------+
         | > 20/22 系统广告与推荐          | [ ] 禁止静默自动安装应用     |  body
         |   21/21 遥测与诊断数据          |                             |
@@ -147,7 +147,7 @@ function Get-TuiFrame {
       Pure: given the same state and size it always returns the same lines.
     #>
     [CmdletBinding()]
-    param($State, [int]$Width, [int]$Height, [string]$Version = '0.1.0')
+    param($State, [int]$Width, [int]$Height, [string]$Version = '0.2.0')
 
     $zh = ($State.Language -eq 'zh')
     $w = [Math]::Max(60, $Width)
@@ -414,7 +414,7 @@ function Get-TuiLanguageFrame {
       languages are first class rather than a translation bolted on.
     #>
     [CmdletBinding()]
-    param($State, [int]$Width, [int]$Height, [string]$Version = '0.1.0')
+    param($State, [int]$Width, [int]$Height, [string]$Version = '0.2.0')
 
     $inner = $Width - 2
     $langs = Get-TuiLanguageList

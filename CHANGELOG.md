@@ -6,10 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-17
+
 ### Added
-- **A windowed interface.** `run.bat` now opens a normal Windows window — areas and their counts
-  on the left, the changes on the right, the plain-language explanation underneath, and buttons
-  for preview, apply, restore, language and about — instead of the full-screen console UI.
+- **A windowed interface.** `run.bat` now opens a normal Windows window — five steps down the
+  left (overview, choose, apply, restore, about), with the catalog, the plan, the run output and
+  the backups each on their own page — instead of the full-screen console UI.
   - It is a **WinForms** shell over the same state machine, chosen because WinForms ships with
     Windows: the download stays a folder with no installer, no runtime to fetch and nothing for
     the user to trust beyond the scripts they can read. Verified on the target machine before
@@ -35,6 +37,49 @@ All notable changes to this project are documented here. The format follows
   that only appears when the interface is used (`$script:Gui` against `[switch] $Gui`).
 
 ### Changed
+- **The window is laid out as five steps, and choosing is not one of them.** The button that
+  changes the machine no longer sits beside the checkboxes that describe the change: **Apply** is
+  its own page, so the flow is read → tick → review → run → undo, which is how the tools people
+  already use for this job are laid out ([winutil](https://github.com/ChrisTitusTech/winutil),
+  [Win11Debloat](https://github.com/Raphire/Win11Debloat)) and how the work actually goes.
+  - **Overview** answers "what is this and what happens if I just press the recommended set".
+  - **Choose** puts a search box over all 74 changes, draws the areas as chips carrying their own
+    tick counts, and keeps the explanation of the highlighted change beside the list.
+  - **Apply** lists the plan before it runs — total, counts by kind (registry, service, scheduled
+    task, software), and a warning naming how many of them uninstall something — then shows the
+    engine's output in a scrolling log. The result line is read from the engine's JSON summary
+    (`43 applied, 1 skipped, 1 failed`) instead of being guessed from the newest folder on the
+    Desktop, and the backup path it printed is shown with it.
+  - **Restore** lists the backups with their timestamps and offers to open the folder.
+  - A **navigation rail** carries each step's live state (`Choose / 45 ticked`, `Restore / 2
+    backups`), and `Ctrl+1`–`Ctrl+5`, `Ctrl+F` and `F1` move around it.
+  - Three faults that exist only on a screen were found by photographing the window and reading
+    it: a chip painted `Privacy  7/10` as `Privacy 7/` (a check box drawn as a button measures its
+    own text short), the catalog's `Ads & suggestions` lost its ampersand to a mnemonic, and the
+    overview repeated the registry's `Windows 10 Pro` on a Windows 11 machine. All three are
+    checked in `tests/Test-Gui.ps1` now.
+- **The window has a design system, not default Windows grey.** A palette of semantic roles —
+  `window`, `card`, `text`, `muted`, `border`, `controlBorder`, `brand`, `accent`, `success`,
+  `caution`, `danger`, `selection` — in a light and a dark set, mirroring the roles the console
+  frontend already uses (`$script:Ink`) so the two interfaces read as one product. The window
+  follows the Windows light/dark preference, and `-GuiTheme light|dark` (or `WCK_GUI_THEME`)
+  overrides it.
+  - **Contrast is measured, not eyeballed.** `tests/Test-Gui.ps1` computes the WCAG ratio for
+    every text-on-surface pair the window draws (4.5:1) and for interactive control boundaries
+    (3:1), and fails on a palette edit that breaks one. Decorative dividers are exempt, and the
+    test says why: a boundary that identifies a control is held to 3:1, a faint separator is not.
+  - **The primary action looks like one.** Apply is the only filled button and is bold; Restore
+    carries the caution colour. It is deliberately **not** the form's `AcceptButton`, so Enter
+    cannot change the machine — asserted behaviourally against the built form.
+  - **The window icon is drawn in code** (a rounded tile with a check mark) instead of shipping an
+    `.ico`, because the whole download is text and an icon is not worth a binary asset.
+  - **Progress says how far.** A step counter beside the bar shows `12/45  26%` from the numbers
+    the engine prints, and the status line ellipsises rather than growing the window.
+  - **The chrome is fully bilingual**, including the restore picker's buttons (they were hardcoded
+    `OK`/`Cancel`), and the language button states the current language (`Language: EN` /
+    `语言：ZH`) instead of only naming the verb.
+  - **Buttons grow with their labels.** A fixed minimum width clipped `Language: EN` to
+    `Language: E`; the gate now refuses a button that cannot fit its own text.
 - **A gate on what the default set is allowed to be.** "Tick nothing, press apply, and you get
   the ads closed and the telemetry off, with no surprises" is now checked rather than claimed:
   `tests/Test-Catalog.ps1` fails if any action that is on by default describes a trade-off, so
@@ -42,7 +87,6 @@ All notable changes to this project are documented here. The format follows
   static, the Settings home page folding away, uninstalling apps -- cannot quietly become
   defaults. Verified by flipping one of them on and watching the gate fail with its id.
 
-### Changed
 - **The README is a product page now, not a repository tour.** It used to open with badges,
   an ASCII frame of the interface, design notes, a directory tree and a count of gate checks.
   All of it was true, and none of it answered the two questions someone arriving from a search
@@ -382,5 +426,6 @@ part worth reading.
   installs its own hosts entries). Services and policies achieve the same reduction with a
   clean rollback path.
 
-[Unreleased]: https://github.com/ChanceFlow/WinCleanKit/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/ChanceFlow/WinCleanKit/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/ChanceFlow/WinCleanKit/releases/tag/v0.2.0
 [0.1.0]: https://github.com/ChanceFlow/WinCleanKit/releases/tag/v0.1.0
